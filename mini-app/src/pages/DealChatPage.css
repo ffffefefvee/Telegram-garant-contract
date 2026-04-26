@@ -1,0 +1,46 @@
+.deal-chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.deal-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--tg-theme-bg-color);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.deal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deal-number {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tg-theme-text-color);
+}
+
+.deal-status {
+  font-size: 12px;
+  color: var(--tg-theme-hint-color);
+  text-transform: capitalize;
+}
+
+.deal-amount {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--tg-theme-hint-color);
+}

@@ -1,0 +1,657 @@
+
+> tg-garant-user-service@1.0.0 build
+> nest build
+
+[96msrc/config/database.ts[0m:[93m21[0m:[93m63[0m - [91merror[0m[90m TS2322: [0mType '{ type: string; host: string; port: number; username: string; password: string; database: string; entities: string[]; migrations: string[]; synchronize: boolean; logging: boolean; extra: { max: number; idleTimeoutMillis: number; connectionTimeoutMillis: number; }; }' is not assignable to type 'TypeOrmModuleOptions'.
+  Type '{ type: string; host: string; port: number; username: string; password: string; database: string; entities: string[]; migrations: string[]; synchronize: boolean; logging: boolean; extra: { max: number; idleTimeoutMillis: number; connectionTimeoutMillis: number; }; }' is not assignable to type '{ retryAttempts?: number | undefined; retryDelay?: number | undefined; toRetry?: ((err: any) => boolean) | undefined; autoLoadEntities?: boolean | undefined; keepConnectionAlive?: boolean | undefined; verboseRetryLog?: boolean | undefined; manualInitialization?: boolean | undefined; } & Partial<...>'.
+    Type '{ type: string; host: string; port: number; username: string; password: string; database: string; entities: string[]; migrations: string[]; synchronize: boolean; logging: boolean; extra: { max: number; idleTimeoutMillis: number; connectionTimeoutMillis: number; }; }' is not assignable to type 'Partial<AuroraMysqlConnectionOptions>'.
+      Types of property 'type' are incompatible.
+        Type 'string' is not assignable to type '"aurora-mysql"'.
+
+[7m21[0m export const getDatabaseConfig = (): TypeOrmModuleOptions => ({
+[7m  [0m [91m                                                              ~[0m
+[7m22[0m   ...databaseConfig,
+[7m  [0m [91m~~~~~~~~~~~~~~~~~~~~[0m
+[7m23[0m });
+[7m  [0m [91m~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m1[0m:[93m50[0m - [91merror[0m[90m TS2305: [0mModule '"typeorm"' has no exported member 'TableEnum'.
+
+[7m1[0m import { MigrationInterface, QueryRunner, Table, TableEnum, TableIndex, TableForeignKey } from 'typeorm';
+[7m [0m [91m                                                 ~~~~~~~~~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m6[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m6[0m     await queryRunner.createEnum(
+[7m [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m13[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m13[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m20[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m20[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m27[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m27[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m436[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m436[0m     await queryRunner.dropEnum('language_code_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m437[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m437[0m     await queryRunner.dropEnum('session_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m438[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m438[0m     await queryRunner.dropEnum('user_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702300000000-CreateUserTables.ts[0m:[93m439[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m439[0m     await queryRunner.dropEnum('user_status_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m1[0m:[93m50[0m - [91merror[0m[90m TS2305: [0mModule '"typeorm"' has no exported member 'TableEnum'.
+
+[7m1[0m import { MigrationInterface, QueryRunner, Table, TableEnum, TableIndex, TableForeignKey } from 'typeorm';
+[7m [0m [91m                                                 ~~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m6[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m6[0m     await queryRunner.createEnum(
+[7m [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m13[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m13[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m32[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m32[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m39[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m39[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m46[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m46[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m53[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m53[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m60[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m60[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m858[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m858[0m     await queryRunner.dropEnum('deal_event_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m859[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m859[0m     await queryRunner.dropEnum('invite_status_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m860[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m860[0m     await queryRunner.dropEnum('attachment_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m861[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m861[0m     await queryRunner.dropEnum('message_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m862[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m862[0m     await queryRunner.dropEnum('currency_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m863[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m863[0m     await queryRunner.dropEnum('deal_status_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702400000000-CreateDealTables.ts[0m:[93m864[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m864[0m     await queryRunner.dropEnum('deal_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702500000000-CreatePaymentTables.ts[0m:[93m1[0m:[93m50[0m - [91merror[0m[90m TS2305: [0mModule '"typeorm"' has no exported member 'TableEnum'.
+
+[7m1[0m import { MigrationInterface, QueryRunner, Table, TableEnum, TableIndex, TableForeignKey } from 'typeorm';
+[7m [0m [91m                                                 ~~~~~~~~~[0m
+[96msrc/migrations/1702500000000-CreatePaymentTables.ts[0m:[93m6[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m6[0m     await queryRunner.createEnum(
+[7m [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702500000000-CreatePaymentTables.ts[0m:[93m13[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m13[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702500000000-CreatePaymentTables.ts[0m:[93m20[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m20[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702500000000-CreatePaymentTables.ts[0m:[93m452[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m452[0m     await queryRunner.dropEnum('payment_method_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702500000000-CreatePaymentTables.ts[0m:[93m453[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m453[0m     await queryRunner.dropEnum('payment_status_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702500000000-CreatePaymentTables.ts[0m:[93m454[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m454[0m     await queryRunner.dropEnum('payment_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702600000000-CreateReviewTables.ts[0m:[93m1[0m:[93m50[0m - [91merror[0m[90m TS2305: [0mModule '"typeorm"' has no exported member 'TableEnum'.
+
+[7m1[0m import { MigrationInterface, QueryRunner, Table, TableEnum, TableIndex, TableForeignKey } from 'typeorm';
+[7m [0m [91m                                                 ~~~~~~~~~[0m
+[96msrc/migrations/1702600000000-CreateReviewTables.ts[0m:[93m6[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m6[0m     await queryRunner.createEnum(
+[7m [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702600000000-CreateReviewTables.ts[0m:[93m13[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m13[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702600000000-CreateReviewTables.ts[0m:[93m20[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m20[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1702600000000-CreateReviewTables.ts[0m:[93m351[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m351[0m     await queryRunner.dropEnum('reputation_event_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702600000000-CreateReviewTables.ts[0m:[93m352[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m352[0m     await queryRunner.dropEnum('review_status_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1702600000000-CreateReviewTables.ts[0m:[93m353[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m353[0m     await queryRunner.dropEnum('review_type_enum');
+[7m   [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m1[0m:[93m50[0m - [91merror[0m[90m TS2305: [0mModule '"typeorm"' has no exported member 'TableEnum'.
+
+[7m1[0m import { MigrationInterface, QueryRunner, Table, TableEnum, TableIndex, TableForeignKey } from 'typeorm';
+[7m [0m [91m                                                 ~~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m8[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m8[0m     await queryRunner.createEnum(
+[7m [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m28[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m28[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m45[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m45[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m53[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m53[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m68[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m68[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m76[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m76[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m84[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'createEnum' does not exist on type 'QueryRunner'.
+
+[7m84[0m     await queryRunner.createEnum(
+[7m  [0m [91m                      ~~~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m1517[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m1517[0m     await queryRunner.dropEnum('arbitrator_status_enum');
+[7m    [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m1518[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m1518[0m     await queryRunner.dropEnum('arbitration_event_type_enum');
+[7m    [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m1519[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m1519[0m     await queryRunner.dropEnum('evidence_type_enum');
+[7m    [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m1520[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m1520[0m     await queryRunner.dropEnum('arbitration_decision_type_enum');
+[7m    [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m1521[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m1521[0m     await queryRunner.dropEnum('dispute_side_enum');
+[7m    [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m1522[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m1522[0m     await queryRunner.dropEnum('dispute_type_enum');
+[7m    [0m [91m                      ~~~~~~~~[0m
+[96msrc/migrations/1710000000000-CreateArbitrationTables.ts[0m:[93m1523[0m:[93m23[0m - [91merror[0m[90m TS2339: [0mProperty 'dropEnum' does not exist on type 'QueryRunner'.
+
+[7m1523[0m     await queryRunner.dropEnum('dispute_status_enum');
+[7m    [0m [91m                      ~~~~~~~~[0m
+[96msrc/modules/arbitration/admin-arbitration.controller.ts[0m:[93m12[0m:[93m3[0m - [91merror[0m[90m TS2724: [0m'"@nestjs/common"' has no exported member named 'UseMiddleware'. Did you mean 'NestMiddleware'?
+
+[7m12[0m   UseMiddleware,
+[7m  [0m [91m  ~~~~~~~~~~~~~[0m
+[96msrc/modules/arbitration/admin-arbitration.controller.ts[0m:[93m87[0m:[93m31[0m - [91merror[0m[90m TS2304: [0mCannot find name 'DisputeStatus'.
+
+[7m87[0m     @Query('status') status?: DisputeStatus,
+[7m  [0m [91m                              ~~~~~~~~~~~~~[0m
+[96msrc/modules/arbitration/arbitration.controller.ts[0m:[93m12[0m:[93m3[0m - [91merror[0m[90m TS2724: [0m'"@nestjs/common"' has no exported member named 'UseMiddleware'. Did you mean 'NestMiddleware'?
+
+[7m12[0m   UseMiddleware,
+[7m  [0m [91m  ~~~~~~~~~~~~~[0m
+[96msrc/modules/arbitration/arbitration.controller.ts[0m:[93m18[0m:[93m3[0m - [91merror[0m[90m TS2724: [0m'"@nestjs/common"' has no exported member named 'FileInterceptor'. Did you mean 'NestInterceptor'?
+
+[7m18[0m   FileInterceptor,
+[7m  [0m [91m  ~~~~~~~~~~~~~~~[0m
+[96msrc/modules/arbitration/arbitration.controller.ts[0m:[93m21[0m:[93m29[0m - [91merror[0m[90m TS7016: [0mCould not find a declaration file for module 'multer'. 'C:/telegram-garant/services/user-service/node_modules/multer/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/multer` if it exists or add a new declaration (.d.ts) file containing `declare module 'multer';`
+
+[7m21[0m import { diskStorage } from 'multer';
+[7m  [0m [91m                            ~~~~~~~~[0m
+[96msrc/modules/arbitration/arbitration.controller.ts[0m:[93m136[0m:[93m20[0m - [91merror[0m[90m TS7006: [0mParameter '_req' implicitly has an 'any' type.
+
+[7m136[0m         filename: (_req, file, cb) => {
+[7m   [0m [91m                   ~~~~[0m
+[96msrc/modules/arbitration/arbitration.controller.ts[0m:[93m136[0m:[93m26[0m - [91merror[0m[90m TS7006: [0mParameter 'file' implicitly has an 'any' type.
+
+[7m136[0m         filename: (_req, file, cb) => {
+[7m   [0m [91m                         ~~~~[0m
+[96msrc/modules/arbitration/arbitration.controller.ts[0m:[93m136[0m:[93m32[0m - [91merror[0m[90m TS7006: [0mParameter 'cb' implicitly has an 'any' type.
+
+[7m136[0m         filename: (_req, file, cb) => {
+[7m   [0m [91m                               ~~[0m
+[96msrc/modules/deal/deal.controller.ts[0m:[93m12[0m:[93m3[0m - [91merror[0m[90m TS2724: [0m'"@nestjs/common"' has no exported member named 'UseMiddleware'. Did you mean 'NestMiddleware'?
+
+[7m12[0m   UseMiddleware,
+[7m  [0m [91m  ~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m124[0m:[93m44[0m - [91merror[0m[90m TS2532: [0mObject is possibly 'undefined'.
+
+[7m124[0m     const commissionAmount = data.amount * this.stateMachine['config'].commissionRate;
+[7m   [0m [91m                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m132[0m:[93m23[0m - [91merror[0m[90m TS2532: [0mObject is possibly 'undefined'.
+
+[7m132[0m       commissionRate: this.stateMachine['config'].commissionRate * 100,
+[7m   [0m [91m                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m305[0m:[93m5[0m - [91merror[0m[90m TS2588: [0mCannot assign to 'deal' because it is a constant.
+
+[7m305[0m     deal = await this.stateMachine.transition(deal, DealStatus.CANCELLED, userId);
+[7m   [0m [91m    ~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m306[0m:[93m5[0m - [91merror[0m[90m TS2322: [0mType 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+
+[7m306[0m     deal.cancelReason = reason;
+[7m   [0m [91m    ~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m326[0m:[93m5[0m - [91merror[0m[90m TS2588: [0mCannot assign to 'deal' because it is a constant.
+
+[7m326[0m     deal = await this.stateMachine.transition(
+[7m   [0m [91m    ~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m349[0m:[93m5[0m - [91merror[0m[90m TS2588: [0mCannot assign to 'deal' because it is a constant.
+
+[7m349[0m     deal = await this.stateMachine.transition(
+[7m   [0m [91m    ~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m354[0m:[93m5[0m - [91merror[0m[90m TS2322: [0mType 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+
+[7m354[0m     deal.cancelReason = reason;
+[7m   [0m [91m    ~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m374[0m:[93m5[0m - [91merror[0m[90m TS2588: [0mCannot assign to 'deal' because it is a constant.
+
+[7m374[0m     deal = await this.stateMachine.transition(deal, DealStatus.IN_PROGRESS);
+[7m   [0m [91m    ~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m397[0m:[93m5[0m - [91merror[0m[90m TS2588: [0mCannot assign to 'deal' because it is a constant.
+
+[7m397[0m     deal = await this.stateMachine.transition(
+[7m   [0m [91m    ~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m426[0m:[93m5[0m - [91merror[0m[90m TS2588: [0mCannot assign to 'deal' because it is a constant.
+
+[7m426[0m     deal = await this.stateMachine.transition(deal, DealStatus.DISPUTED, userId);
+[7m   [0m [91m    ~~~~[0m
+[96msrc/modules/deal/deal.service.ts[0m:[93m501[0m:[93m7[0m - [91merror[0m[90m TS2783: [0m'dealId' is specified more than once, so this usage will be overwritten.
+
+[7m501[0m       dealId: deal.id,
+[7m   [0m [91m      ~~~~~~~~~~~~~~~[0m
+
+  [96msrc/modules/deal/deal.service.ts[0m:[93m503[0m:[93m7[0m
+    [7m503[0m       ...data,
+    [7m   [0m [96m      ~~~~~~~[0m
+    This spread always overwrites this property.
+[96msrc/modules/deal/deal.service.ts[0m:[93m502[0m:[93m7[0m - [91merror[0m[90m TS2783: [0m'uploadedById' is specified more than once, so this usage will be overwritten.
+
+[7m502[0m       uploadedById: data.uploadedById,
+[7m   [0m [91m      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+  [96msrc/modules/deal/deal.service.ts[0m:[93m503[0m:[93m7[0m
+    [7m503[0m       ...data,
+    [7m   [0m [96m      ~~~~~~~[0m
+    This spread always overwrites this property.
+[96msrc/modules/deal/entities/deal-attachment.entity.ts[0m:[93m11[0m:[93m22[0m - [91merror[0m[90m TS2307: [0mCannot find module '../user/entities/user.entity' or its corresponding type declarations.
+
+[7m11[0m import { User } from '../user/entities/user.entity';
+[7m  [0m [91m                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/entities/deal-attachment.entity.ts[0m:[93m12[0m:[93m32[0m - [91merror[0m[90m TS2307: [0mCannot find module './enums/deal.enum' or its corresponding type declarations.
+
+[7m12[0m import { AttachmentType } from './enums/deal.enum';
+[7m  [0m [91m                               ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/entities/deal-attachment.entity.ts[0m:[93m85[0m:[93m10[0m - [91merror[0m[90m TS1005: [0m'(' expected.
+
+[7m85[0m   get is downloadable(): boolean {
+[7m  [0m [91m         ~~~~~~~~~~~~[0m
+[96msrc/modules/deal/entities/deal-event.entity.ts[0m:[93m11[0m:[93m22[0m - [91merror[0m[90m TS2307: [0mCannot find module '../user/entities/user.entity' or its corresponding type declarations.
+
+[7m11[0m import { User } from '../user/entities/user.entity';
+[7m  [0m [91m                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/entities/deal-event.entity.ts[0m:[93m12[0m:[93m43[0m - [91merror[0m[90m TS2307: [0mCannot find module './enums/deal.enum' or its corresponding type declarations.
+
+[7m12[0m import { DealEventType, DealStatus } from './enums/deal.enum';
+[7m  [0m [91m                                          ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/entities/deal-invite.entity.ts[0m:[93m13[0m:[93m22[0m - [91merror[0m[90m TS2307: [0mCannot find module '../user/entities/user.entity' or its corresponding type declarations.
+
+[7m13[0m import { User } from '../user/entities/user.entity';
+[7m  [0m [91m                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/entities/deal-message.entity.ts[0m:[93m11[0m:[93m22[0m - [91merror[0m[90m TS2307: [0mCannot find module '../user/entities/user.entity' or its corresponding type declarations.
+
+[7m11[0m import { User } from '../user/entities/user.entity';
+[7m  [0m [91m                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/entities/deal.entity.ts[0m:[93m13[0m:[93m22[0m - [91merror[0m[90m TS2307: [0mCannot find module '../user/entities/user.entity' or its corresponding type declarations.
+
+[7m13[0m import { User } from '../user/entities/user.entity';
+[7m  [0m [91m                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/entities/deal.entity.ts[0m:[93m14[0m:[93m58[0m - [91merror[0m[90m TS2307: [0mCannot find module './enums/deal.enum' or its corresponding type declarations.
+
+[7m14[0m import { DealType, DealStatus, DealSide, Currency } from './enums/deal.enum';
+[7m  [0m [91m                                                         ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/deal/fsm/deal-state-machine.ts[0m:[93m272[0m:[93m14[0m - [91merror[0m[90m TS2304: [0mCannot find name 'DealEvent'.
+
+[7m272[0m   ): Partial<DealEvent> {
+[7m   [0m [91m             ~~~~~~~~~[0m
+[96msrc/modules/payment/cryptomus.service.ts[0m:[93m3[0m:[93m46[0m - [91merror[0m[90m TS2307: [0mCannot find module '../enums/payment.enum' or its corresponding type declarations.
+
+[7m3[0m import { PaymentStatus, PaymentMethod } from '../enums/payment.enum';
+[7m [0m [91m                                             ~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payment/cryptomus.service.ts[0m:[93m4[0m:[93m25[0m - [91merror[0m[90m TS2307: [0mCannot find module '../entities/payment.entity' or its corresponding type declarations.
+
+[7m4[0m import { Payment } from '../entities/payment.entity';
+[7m [0m [91m                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/payment/payment.controller.ts[0m:[93m11[0m:[93m3[0m - [91merror[0m[90m TS2724: [0m'"@nestjs/common"' has no exported member named 'UseMiddleware'. Did you mean 'NestMiddleware'?
+
+[7m11[0m   UseMiddleware,
+[7m  [0m [91m  ~~~~~~~~~~~~~[0m
+[96msrc/modules/review/entities/review.entity.ts[0m:[93m54[0m:[93m13[0m - [91merror[0m[90m TS2769: [0mNo overload matches this call.
+  The last overload gave the following error.
+    Object literal may only specify known properties, and 'type' does not exist in type '(type?: any) => Function'.
+
+[7m54[0m   @Column({ type: 'int', min: 1, max: 5 })
+[7m  [0m [91m            ~~~~[0m
+
+  [96mnode_modules/typeorm/decorator/columns/Column.d.ts[0m:[93m74[0m:[93m25[0m
+    [7m74[0m export declare function Column(type: (type?: any) => Function, options?: ColumnEmbeddedOptions): PropertyDecorator;
+    [7m  [0m [96m                        ~~~~~~[0m
+    The last overload is declared here.
+[96msrc/modules/review/review.controller.ts[0m:[93m11[0m:[93m3[0m - [91merror[0m[90m TS2724: [0m'"@nestjs/common"' has no exported member named 'UseMiddleware'. Did you mean 'NestMiddleware'?
+
+[7m11[0m   UseMiddleware,
+[7m  [0m [91m  ~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m127[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m127[0m         const t = this.i18nService.t(user?.telegramLanguageCode || 'ru');
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m145[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m145[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m161[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m161[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m179[0m:[93m66[0m - [91merror[0m[90m TS2322: [0mType 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+
+[7m179[0m           this.i18nService.translate('common.select_language', { lang: user?.telegramLanguageCode }),
+[7m   [0m [91m                                                                 ~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m193[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m193[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m201[0m:[93m11[0m - [91merror[0m[90m TS2322: [0mType 'Markup<InlineKeyboardMarkup>' is not assignable to type 'InlineKeyboardMarkup | ReplyKeyboardMarkup | ReplyKeyboardRemove | ForceReply | undefined'.
+  Property 'force_reply' is missing in type 'Markup<InlineKeyboardMarkup>' but required in type 'ForceReply'.
+
+[7m201[0m           reply_markup: keyboard,
+[7m   [0m [91m          ~~~~~~~~~~~~[0m
+
+  [96mnode_modules/@telegraf/types/markup.d.ts[0m:[93m188[0m:[93m5[0m
+    [7m188[0m     force_reply: true;
+    [7m   [0m [96m    ~~~~~~~~~~~[0m
+    'force_reply' is declared here.
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m212[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m212[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m236[0m:[93m44[0m - [91merror[0m[90m TS18046: [0m'error' is of type 'unknown'.
+
+[7m236[0m       this.logger.error(`Telegram error: ${error.message}`, error);
+[7m   [0m [91m                                           ~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m244[0m:[93m53[0m - [91merror[0m[90m TS2724: [0m'"C:/telegram-garant/services/user-service/node_modules/telegraf/typings/markup"' has no exported member named 'InlineKeyboardMarkup'. Did you mean 'inlineKeyboard'?
+
+[7m244[0m   private getMainMenuKeyboard(lang: string): Markup.InlineKeyboardMarkup {
+[7m   [0m [91m                                                    ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m245[0m:[93m32[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m245[0m     const t = this.i18nService.t(lang);
+[7m   [0m [91m                               ~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m266[0m:[93m41[0m - [91merror[0m[90m TS2724: [0m'"C:/telegram-garant/services/user-service/node_modules/telegraf/typings/markup"' has no exported member named 'InlineKeyboardMarkup'. Did you mean 'inlineKeyboard'?
+
+[7m266[0m   private getLanguageKeyboard(): Markup.InlineKeyboardMarkup {
+[7m   [0m [91m                                        ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m285[0m:[93m28[0m - [91merror[0m[90m TS2724: [0m'"C:/telegram-garant/services/user-service/node_modules/telegraf/typings/markup"' has no exported member named 'InlineKeyboardMarkup'. Did you mean 'inlineKeyboard'?
+
+[7m285[0m       replyMarkup?: Markup.InlineKeyboardMarkup | Markup.ReplyKeyboardMarkup;
+[7m   [0m [91m                           ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m285[0m:[93m58[0m - [91merror[0m[90m TS2694: [0mNamespace '"C:/telegram-garant/services/user-service/node_modules/telegraf/typings/markup"' has no exported member 'ReplyKeyboardMarkup'.
+
+[7m285[0m       replyMarkup?: Markup.InlineKeyboardMarkup | Markup.ReplyKeyboardMarkup;
+[7m   [0m [91m                                                         ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m294[0m:[93m9[0m - [91merror[0m[90m TS2322: [0mType 'string | undefined' is not assignable to type 'ParseMode | undefined'.
+  Type 'string' is not assignable to type 'ParseMode | undefined'.
+
+[7m294[0m         parse_mode: options?.parseMode,
+[7m   [0m [91m        ~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m308[0m:[93m28[0m - [91merror[0m[90m TS2724: [0m'"C:/telegram-garant/services/user-service/node_modules/telegraf/typings/markup"' has no exported member named 'InlineKeyboardMarkup'. Did you mean 'inlineKeyboard'?
+
+[7m308[0m       replyMarkup?: Markup.InlineKeyboardMarkup | Markup.ReplyKeyboardMarkup;
+[7m   [0m [91m                           ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m308[0m:[93m58[0m - [91merror[0m[90m TS2694: [0mNamespace '"C:/telegram-garant/services/user-service/node_modules/telegraf/typings/markup"' has no exported member 'ReplyKeyboardMarkup'.
+
+[7m308[0m       replyMarkup?: Markup.InlineKeyboardMarkup | Markup.ReplyKeyboardMarkup;
+[7m   [0m [91m                                                         ~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-bot.service.ts[0m:[93m317[0m:[93m9[0m - [91merror[0m[90m TS2322: [0mType 'string | undefined' is not assignable to type 'ParseMode | undefined'.
+  Type 'string' is not assignable to type 'ParseMode | undefined'.
+
+[7m317[0m         parse_mode: options?.parseMode,
+[7m   [0m [91m        ~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m34[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m34[0m         const t = this.i18nService.t(lang);
+[7m  [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m77[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m77[0m         const t = this.i18nService.t(lang);
+[7m  [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m110[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m110[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m129[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m129[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m155[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m155[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m173[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m173[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m211[0m:[93m34[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m211[0m       const t = this.i18nService.t(languageCode);
+[7m   [0m [91m                                 ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m231[0m:[93m34[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m231[0m       const t = this.i18nService.t(lang);
+[7m   [0m [91m                                 ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m245[0m:[93m32[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m245[0m     const t = this.i18nService.t(lang);
+[7m   [0m [91m                               ~[0m
+[96msrc/modules/telegram-bot/telegram-callback.handler.ts[0m:[93m267[0m:[93m32[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m267[0m     const t = this.i18nService.t(lang);
+[7m   [0m [91m                               ~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m4[0m:[93m29[0m - [91merror[0m[90m TS2307: [0mCannot find module './deal.service' or its corresponding type declarations.
+
+[7m4[0m import { DealService } from './deal.service';
+[7m [0m [91m                            ~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m7[0m:[93m48[0m - [91merror[0m[90m TS2307: [0mCannot find module './entities/deal.enum' or its corresponding type declarations.
+
+[7m7[0m import { DealType, Currency, DealStatus } from './entities/deal.enum';
+[7m [0m [91m                                               ~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m49[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m49[0m         const t = this.i18nService.t(lang);
+[7m  [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m76[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m76[0m         const t = this.i18nService.t(lang);
+[7m  [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m93[0m:[93m13[0m - [91merror[0m[90m TS2741: [0mProperty 'inline_keyboard' is missing in type 'Markup<ReplyKeyboardRemove>' but required in type 'InlineKeyboardMarkup'.
+
+[7m93[0m             reply_markup: Markup.removeKeyboard(),
+[7m  [0m [91m            ~~~~~~~~~~~~[0m
+
+  [96mnode_modules/@telegraf/types/markup.d.ts[0m:[93m6[0m:[93m5[0m
+    [7m6[0m     inline_keyboard: InlineKeyboardButton[][];
+    [7m [0m [96m    ~~~~~~~~~~~~~~~[0m
+    'inline_keyboard' is declared here.
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m108[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m108[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m132[0m:[93m11[0m - [91merror[0m[90m TS2322: [0mType 'Markup<InlineKeyboardMarkup>' is not assignable to type 'InlineKeyboardMarkup | ReplyKeyboardMarkup | ReplyKeyboardRemove | ForceReply | undefined'.
+  Property 'force_reply' is missing in type 'Markup<InlineKeyboardMarkup>' but required in type 'ForceReply'.
+
+[7m132[0m           reply_markup: keyboard,
+[7m   [0m [91m          ~~~~~~~~~~~~[0m
+
+  [96mnode_modules/@telegraf/types/markup.d.ts[0m:[93m188[0m:[93m5[0m
+    [7m188[0m     force_reply: true;
+    [7m   [0m [96m    ~~~~~~~~~~~[0m
+    'force_reply' is declared here.
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m150[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m150[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m189[0m:[93m36[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m189[0m         const t = this.i18nService.t(lang);
+[7m   [0m [91m                                   ~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m214[0m:[93m16[0m - [91merror[0m[90m TS18048: [0m'ctx.session' is possibly 'undefined'.
+
+[7m214[0m         delete ctx.session.dealCreation;
+[7m   [0m [91m               ~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m226[0m:[93m13[0m - [91merror[0m[90m TS2322: [0mType 'Markup<InlineKeyboardMarkup>' is not assignable to type 'InlineKeyboardMarkup | ReplyKeyboardMarkup | ReplyKeyboardRemove | ForceReply | undefined'.
+  Property 'force_reply' is missing in type 'Markup<InlineKeyboardMarkup>' but required in type 'ForceReply'.
+
+[7m226[0m             reply_markup: keyboard,
+[7m   [0m [91m            ~~~~~~~~~~~~[0m
+
+  [96mnode_modules/@telegraf/types/markup.d.ts[0m:[93m188[0m:[93m5[0m
+    [7m188[0m     force_reply: true;
+    [7m   [0m [96m    ~~~~~~~~~~~[0m
+    'force_reply' is declared here.
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m239[0m:[93m49[0m - [91merror[0m[90m TS2724: [0m'"C:/telegram-garant/services/user-service/node_modules/telegraf/typings/markup"' has no exported member named 'InlineKeyboardMarkup'. Did you mean 'inlineKeyboard'?
+
+[7m239[0m   private getTypeKeyboard(lang: string): Markup.InlineKeyboardMarkup {
+[7m   [0m [91m                                                ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m240[0m:[93m32[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m240[0m     const t = this.i18nService.t(lang);
+[7m   [0m [91m                               ~[0m
+[96msrc/modules/telegram-bot/telegram-deal.handler.ts[0m:[93m293[0m:[93m34[0m - [91merror[0m[90m TS2339: [0mProperty 't' does not exist on type 'I18nService'.
+
+[7m293[0m       const t = this.i18nService.t(lang);
+[7m   [0m [91m                                 ~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m85[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m85[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m  [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m94[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m94[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m  [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m109[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m109[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m123[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m123[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m132[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m132[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m141[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m141[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m147[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m147[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m156[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m156[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m165[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m165[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m176[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m176[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.controller.ts[0m:[93m185[0m:[93m4[0m - [91merror[0m[90m TS2304: [0mCannot find name 'UseMiddleware'.
+
+[7m185[0m   @UseMiddleware(RequireAuthMiddleware)
+[7m   [0m [91m   ~~~~~~~~~~~~~[0m
+[96msrc/modules/user/user.service.spec.ts[0m:[93m200[0m:[93m50[0m - [91merror[0m[90m TS2345: [0mArgument of type '{ userId: string; type: "telegram"; ipAddress: string; }' is not assignable to parameter of type 'CreateSessionDto'.
+  Types of property 'type' are incompatible.
+    Type '"telegram"' is not assignable to type 'SessionType'.
+
+[7m200[0m       const result = await service.createSession(sessionData);
+[7m   [0m [91m                                                 ~~~~~~~~~~~[0m
+[96msrc/modules/user/user.service.ts[0m:[93m109[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType '{ telegramId: number; deletedAt: null; }' is not assignable to type 'FindOptionsWhere<User> | FindOptionsWhere<User>[] | undefined'.
+  Types of property 'deletedAt' are incompatible.
+    Type 'null' is not assignable to type 'Date | FindOperator<Date> | undefined'.
+
+[7m109[0m       where: { telegramId, deletedAt: null },
+[7m   [0m [91m      ~~~~~[0m
+
+  [96mnode_modules/typeorm/find-options/FindOneOptions.d.ts[0m:[93m23[0m:[93m5[0m
+    [7m23[0m     where?: FindOptionsWhere<Entity>[] | FindOptionsWhere<Entity>;
+    [7m  [0m [96m    ~~~~~[0m
+    The expected type comes from property 'where' which is declared here on type 'FindOneOptions<User>'
+[96msrc/modules/user/user.service.ts[0m:[93m116[0m:[93m7[0m - [91merror[0m[90m TS2322: [0mType '{ email: string; deletedAt: null; }' is not assignable to type 'FindOptionsWhere<User> | FindOptionsWhere<User>[] | undefined'.
+  Types of property 'deletedAt' are incompatible.
+    Type 'null' is not assignable to type 'Date | FindOperator<Date> | undefined'.
+
+[7m116[0m       where: { email, deletedAt: null },
+[7m   [0m [91m      ~~~~~[0m
+
+  [96mnode_modules/typeorm/find-options/FindOneOptions.d.ts[0m:[93m23[0m:[93m5[0m
+    [7m23[0m     where?: FindOptionsWhere<Entity>[] | FindOptionsWhere<Entity>;
+    [7m  [0m [96m    ~~~~~[0m
+    The expected type comes from property 'where' which is declared here on type 'FindOneOptions<User>'
+
+Found 145 error(s).
+

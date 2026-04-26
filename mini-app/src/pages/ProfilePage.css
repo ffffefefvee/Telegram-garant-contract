@@ -1,0 +1,149 @@
+.profile-page {
+  padding: 16px;
+  min-height: 100vh;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--tg-theme-button-color, #2481cc);
+  color: var(--tg-theme-button-text-color, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.profile-info h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--tg-theme-text-color, #000);
+  margin: 0 0 4px 0;
+}
+
+.profile-username {
+  font-size: 14px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tg-theme-text-color, #000);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+}
+
+.profile-deals-summary {
+  background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.deals-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.deals-row:not(:last-child) {
+  border-bottom: 1px solid var(--tg-theme-bg-color, #fff);
+}
+
+.deals-row span:first-child {
+  font-size: 15px;
+  color: var(--tg-theme-text-color, #000);
+}
+
+.deals-value {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.deals-value.success {
+  color: #34c759;
+}
+
+.deals-value.danger {
+  color: #ff3b30;
+}
+
+.deals-value.warning {
+  color: #ff9500;
+}
+
+.profile-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  color: var(--tg-theme-text-color, #000);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.menu-item:active {
+  background: var(--gray-200, #e8e8e8);
+}
+
+.menu-item svg {
+  color: var(--tg-theme-hint-color, #8e8e93);
+}
+
+.menu-item.logout {
+  color: var(--tg-theme-button-color, #2481cc);
+  margin-top: 16px;
+}
+
+.menu-item.logout svg {
+  color: var(--tg-theme-button-color, #2481cc);
+}
+
+.profile-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+}

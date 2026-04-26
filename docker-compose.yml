@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: tg-garant-postgres
+    environment:
+      POSTGRES_USER: garant_user
+      POSTGRES_PASSWORD: garant_pass
+      POSTGRES_DB: garant_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - garant-network
+
+  redis:
+    image: redis:alpine
+    container_name: tg-garant-redis
+    command: redis-server --requirepass garant_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - garant-network
+
+networks:
+  garant-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,344 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserService } from './user.service';
+import { User, UserStatus, UserType } from './entities/user.entity';
+import { UserSession } from './entities/user-session.entity';
+import { LanguagePreference, LanguageCode } from './entities/language-preference.entity';
+import { I18nService } from '../i18n/i18n.service';
+
+describe('UserService', () => {
+  let service: UserService;
+  let userRepository: Repository<User>;
+  let sessionRepository: Repository<UserSession>;
+  let languageRepository: Repository<LanguagePreference>;
+
+  const mockUser: Partial<User> = {
+    id: 'test-uuid-123',
+    telegramId: 123456789,
+    telegramUsername: 'testuser',
+    telegramFirstName: 'Test',
+    telegramLastName: 'User',
+    telegramLanguageCode: 'ru',
+    status: UserStatus.ACTIVE,
+    roles: [UserType.BUYER],
+    balance: 0,
+    reputationScore: 0,
+    completedDeals: 0,
+    cancelledDeals: 0,
+    disputedDeals: 0,
+    settings: {},
+    metadata: {},
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockUserRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    find: jest.fn(),
+  };
+
+  const mockSessionRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+  };
+
+  const mockLanguageRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepository,
+        },
+        {
+          provide: getRepositoryToken(UserSession),
+          useValue: mockSessionRepository,
+        },
+        {
+          provide: getRepositoryToken(LanguagePreference),
+          useValue: mockLanguageRepository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<UserService>(UserService);
+    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+    sessionRepository = module.get<Repository<UserSession>>(getRepositoryToken(UserSession));
+    languageRepository = module.get<Repository<LanguagePreference>>(
+      getRepositoryToken(LanguagePreference),
+    );
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should create a new user successfully', async () => {
+      const createDto = {
+        telegramId: 123456789,
+        telegramUsername: 'testuser',
+        telegramFirstName: 'Test',
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.create.mockReturnValue(mockUser);
+      mockUserRepository.save.mockResolvedValue(mockUser);
+      mockLanguageRepository.save.mockResolvedValue({});
+
+      const result = await service.create(createDto);
+
+      expect(userRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...createDto,
+          status: UserStatus.ACTIVE,
+          roles: [UserType.BUYER],
+        }),
+      );
+      expect(userRepository.save).toHaveBeenCalled();
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should throw ConflictException if user with telegramId already exists', async () => {
+      const createDto = { telegramId: 123456789 };
+
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+
+      await expect(service.create(createDto)).rejects.toThrow('already exists');
+    });
+  });
+
+  describe('findByTelegramId', () => {
+    it('should return user by telegram ID', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+
+      const result = await service.findByTelegramId(123456789);
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { telegramId: 123456789, deletedAt: null },
+        relations: ['languagePreferences'],
+      });
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should return null if user not found', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.findByTelegramId(999999999);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('updateTelegramUser', () => {
+    it('should update existing user', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.save.mockResolvedValue(mockUser);
+
+      const result = await service.updateTelegramUser(
+        123456789,
+        'newusername',
+        'NewFirst',
+        'NewLast',
+        'en',
+      );
+
+      expect(userRepository.save).toHaveBeenCalled();
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should create new user if not exists', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.create.mockReturnValue(mockUser);
+      mockUserRepository.save.mockResolvedValue(mockUser);
+      mockLanguageRepository.save.mockResolvedValue({});
+
+      const result = await service.updateTelegramUser(
+        999999999,
+        'newuser',
+        'New',
+        'User',
+        'ru',
+      );
+
+      expect(userRepository.create).toHaveBeenCalled();
+      expect(userRepository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('createSession', () => {
+    it('should create a new session', async () => {
+      const sessionData = {
+        userId: 'test-uuid-123',
+        type: 'telegram' as const,
+        ipAddress: '127.0.0.1',
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockSessionRepository.create.mockReturnValue({
+        ...sessionData,
+        token: 'test-token',
+        expiresAt: new Date(),
+      });
+      mockSessionRepository.save.mockResolvedValue({ token: 'test-token' });
+
+      const result = await service.createSession({
+        userId: sessionData.userId,
+        type: 'telegram' as any,
+        ipAddress: sessionData.ipAddress,
+      });
+
+      expect(sessionRepository.create).toHaveBeenCalled();
+      expect(sessionRepository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('validateSession', () => {
+    it('should return valid session', async () => {
+      const mockSession = {
+        token: 'test-token',
+        isActive: true,
+        expiresAt: new Date(Date.now() + 1000000),
+        revokedAt: null,
+        user: mockUser,
+        updateActivity: jest.fn(),
+      };
+
+      mockSessionRepository.findOne.mockResolvedValue(mockSession);
+      mockSessionRepository.save.mockResolvedValue(mockSession);
+
+      const result = await service.validateSession('test-token');
+
+      expect(result).toEqual(mockSession);
+    });
+
+    it('should return null for expired session', async () => {
+      const mockSession = {
+        token: 'test-token',
+        isActive: true,
+        expiresAt: new Date(Date.now() - 1000000),
+        revokedAt: null,
+        isValid: false,
+      };
+
+      mockSessionRepository.findOne.mockResolvedValue(mockSession);
+
+      const result = await service.validateSession('test-token');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getUserLanguage', () => {
+    it('should return user language preference', async () => {
+      const mockPreference = {
+        languageCode: LanguageCode.EN,
+        context: 'global',
+      };
+
+      mockLanguageRepository.findOne.mockResolvedValue(mockPreference);
+
+      const result = await service.getUserLanguage('test-uuid-123');
+
+      expect(result).toBe(LanguageCode.EN);
+    });
+
+    it('should return default language if no preference', async () => {
+      mockLanguageRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.findOne.mockResolvedValue({
+        ...mockUser,
+        telegramLanguageCode: null,
+      });
+
+      const result = await service.getUserLanguage('test-uuid-123');
+
+      expect(result).toBe(LanguageCode.RU);
+    });
+  });
+
+  describe('updateReputation', () => {
+    it('should update user reputation score', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.save.mockResolvedValue({
+        ...mockUser,
+        reputationScore: 10,
+      });
+
+      const result = await service.updateReputation('test-uuid-123', 10);
+
+      expect(userRepository.save).toHaveBeenCalled();
+      expect(result.reputationScore).toBe(10);
+    });
+
+    it('should not allow reputation score below 0', async () => {
+      const lowReputationUser = { ...mockUser, reputationScore: 5 };
+
+      mockUserRepository.findOne.mockResolvedValue(lowReputationUser);
+      mockUserRepository.save.mockResolvedValue({
+        ...lowReputationUser,
+        reputationScore: 0,
+      });
+
+      const result = await service.updateReputation('test-uuid-123', -10);
+
+      expect(result.reputationScore).toBe(0);
+    });
+  });
+
+  describe('updateBalance', () => {
+    it('should update user balance', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockUserRepository.save.mockResolvedValue({
+        ...mockUser,
+        balance: 100,
+      });
+
+      const result = await service.updateBalance('test-uuid-123', 100);
+
+      expect(result.balance).toBe(100);
+    });
+
+    it('should throw error on insufficient balance', async () => {
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+
+      await expect(service.updateBalance('test-uuid-123', -100)).rejects.toThrow(
+        'Insufficient balance',
+      );
+    });
+  });
+
+  describe('getUserStats', () => {
+    it('should return user statistics', async () => {
+      const userWithDeals = {
+        ...mockUser,
+        completedDeals: 8,
+        cancelledDeals: 1,
+        disputedDeals: 1,
+      };
+
+      mockUserRepository.findOne.mockResolvedValue(userWithDeals);
+
+      const result = await service.getUserStats('test-uuid-123');
+
+      expect(result.totalDeals).toBe(10);
+      expect(result.successRate).toBe(80);
+      expect(result.reputationScore).toBe(0);
+      expect(result.balance).toBe(0);
+    });
+  });
+});
