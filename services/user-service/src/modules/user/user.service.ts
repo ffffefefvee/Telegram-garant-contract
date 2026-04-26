@@ -108,7 +108,7 @@ export class UserService {
 
   async findByTelegramId(telegramId: number): Promise<User | null> {
     return this.userRepository.findOne({
-      where: { telegramId } as any,
+      where: { telegramId, deletedAt: IsNull() } as any,
       relations: ['languagePreferences'],
     });
   }
