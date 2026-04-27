@@ -18,6 +18,7 @@ contract PlatformTreasury is AccessControl, ReentrancyGuard {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant ESCROW_ROLE = keccak256("ESCROW_ROLE");
     bytes32 public constant REGISTRY_ROLE = keccak256("REGISTRY_ROLE");
+    bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
 
     IERC20 public immutable token;
 
@@ -101,6 +102,12 @@ contract PlatformTreasury is AccessControl, ReentrancyGuard {
         mainBalance -= amount;
         token.safeTransfer(to, amount);
         emit Withdrawn(to, amount);
+    }
+
+    /// @notice Выдать свежему escrow-клону ESCROW_ROLE. Вызывает EscrowFactory.
+    function authorizeEscrow(address escrow) external onlyRole(FACTORY_ROLE) {
+        if (escrow == address(0)) revert ZeroAddress();
+        _grantRole(ESCROW_ROLE, escrow);
     }
 
     function setReserveBps(uint16 newBps) external onlyRole(ADMIN_ROLE) {

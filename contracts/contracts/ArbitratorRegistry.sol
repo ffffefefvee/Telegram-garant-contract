@@ -18,6 +18,7 @@ contract ArbitratorRegistry is AccessControl, ReentrancyGuard {
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant ESCROW_ROLE = keccak256("ESCROW_ROLE");
+    bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
 
     enum Level {
         TRAINEE,
@@ -231,6 +232,12 @@ contract ArbitratorRegistry is AccessControl, ReentrancyGuard {
     }
 
     // ---------- Admin params ----------
+
+    /// @notice Выдать свежему escrow-клону ESCROW_ROLE. Вызывает EscrowFactory.
+    function authorizeEscrow(address escrow) external onlyRole(FACTORY_ROLE) {
+        if (escrow == address(0)) revert ZeroAddress();
+        _grantRole(ESCROW_ROLE, escrow);
+    }
 
     function setMinStake(uint256 newMin, uint256 newSeniorMin) external onlyRole(ADMIN_ROLE) {
         minStake = newMin;
