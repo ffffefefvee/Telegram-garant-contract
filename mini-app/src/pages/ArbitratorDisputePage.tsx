@@ -75,6 +75,7 @@ export const ArbitratorDisputePage: React.FC = () => {
 
   const [chatInput, setChatInput] = useState('');
   const [chatSending, setChatSending] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const [preset, setPreset] = useState<Preset | null>(null);
   const [reasoning, setReasoning] = useState('');
@@ -124,6 +125,7 @@ export const ArbitratorDisputePage: React.FC = () => {
   const handleSendChat = async () => {
     if (!id || !chatInput.trim() || chatSending) return;
     setChatSending(true);
+    setChatError(null);
     try {
       const msg = await arbitrationApi.sendChatMessage(id, chatInput.trim());
       setChat((prev) => [...prev, msg]);
@@ -132,7 +134,7 @@ export const ArbitratorDisputePage: React.FC = () => {
       const m =
         (err as { response?: { data?: { message?: string } } }).response?.data
           ?.message ?? (err instanceof Error ? err.message : 'Не удалось отправить');
-      setError(m);
+      setChatError(m);
     } finally {
       setChatSending(false);
     }
@@ -310,6 +312,7 @@ export const ArbitratorDisputePage: React.FC = () => {
             )}
             <div ref={chatEndRef} />
           </div>
+          {chatError && <p className="wallet-error">{chatError}</p>}
           <div className="chat-input-row">
             <input
               className="chat-input"
