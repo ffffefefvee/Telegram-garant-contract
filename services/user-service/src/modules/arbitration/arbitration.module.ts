@@ -33,6 +33,7 @@ import { DealModule } from '../deal/deal.module';
 import { PaymentModule } from '../payment/payment.module';
 import { ReviewModule } from '../review/review.module';
 import { EscrowModule } from '../escrow/escrow.module';
+import { OpsModule } from '../ops/ops.module';
 import { Deal } from '../deal/entities/deal.entity';
 import { User } from '../user/entities/user.entity';
 
@@ -57,6 +58,7 @@ import { User } from '../user/entities/user.entity';
     forwardRef(() => PaymentModule),
     ReviewModule,
     EscrowModule,
+    OpsModule,
   ],
   controllers: [
     ArbitrationController,
