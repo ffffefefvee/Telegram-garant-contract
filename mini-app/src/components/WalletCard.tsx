@@ -47,7 +47,9 @@ export const WalletCard: React.FC = () => {
       const updated: User = await usersApi.detachWallet();
       setUser(updated);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Не удалось отвязать';
+      const msg =
+        (err as { response?: { data?: { message?: string } } }).response?.data
+          ?.message ?? (err instanceof Error ? err.message : 'Не удалось отвязать');
       setError(msg);
     } finally {
       setSubmitting(false);

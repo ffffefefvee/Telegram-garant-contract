@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { authApi, AUTH_TOKEN_STORAGE_KEY } from '../api';
+import { authApi } from '../api';
 import type { Deal, Message, User } from '../types';
 
 export type AuthStatus = 'idle' | 'pending' | 'authenticated' | 'error';
@@ -68,7 +68,6 @@ export const useAppStore = create<AppState>((set) => ({
 
   logout: () => {
     authApi.logout();
-    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
     set({
       user: null,
       authStatus: 'idle',
