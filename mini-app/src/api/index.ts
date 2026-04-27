@@ -1,5 +1,17 @@
 import axios, { AxiosInstance } from 'axios';
-import type { AuthSession, Deal, Message, Payment, User } from '../types';
+import type {
+  ArbitrationChatMessage,
+  ArbitratorProfile,
+  ArbitratorStatistics,
+  AuthSession,
+  Deal,
+  Dispute,
+  Evidence,
+  MakeDecisionInput,
+  Message,
+  Payment,
+  User,
+} from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -149,4 +161,31 @@ export const usersApi = {
     api.post<User>('/users/me/wallet', { walletAddress }),
 
   detachWallet: () => api.delete<User>('/users/me/wallet'),
+};
+
+export const arbitrationApi = {
+  getMyDisputes: () => api.get<Dispute[]>('/arbitration/disputes'),
+
+  getDispute: (id: string) => api.get<Dispute>(`/arbitration/disputes/${id}`),
+
+  getEvidence: (disputeId: string) =>
+    api.get<Evidence[]>(`/arbitration/disputes/${disputeId}/evidence`),
+
+  getChat: (disputeId: string, limit?: number) =>
+    api.get<ArbitrationChatMessage[]>(`/arbitration/disputes/${disputeId}/chat`, { limit }),
+
+  sendChatMessage: (disputeId: string, content: string, attachments?: string[]) =>
+    api.post<ArbitrationChatMessage>(`/arbitration/disputes/${disputeId}/chat`, {
+      content,
+      attachments,
+    }),
+
+  makeDecision: (disputeId: string, dto: MakeDecisionInput) =>
+    api.post<unknown>(`/arbitration/disputes/${disputeId}/decision`, dto),
+
+  getMyArbitratorProfile: () =>
+    api.get<ArbitratorProfile>('/arbitration/arbitrators/me'),
+
+  getMyStatistics: () =>
+    api.get<ArbitratorStatistics>('/arbitration/arbitrators/me/statistics'),
 };

@@ -5,6 +5,7 @@ import { DealsPage } from './pages/DealsPage';
 import { DealChatPage } from './pages/DealChatPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ArbitratorPage } from './pages/ArbitratorPage';
+import { ArbitratorDisputePage } from './pages/ArbitratorDisputePage';
 import { AdminPage } from './pages/AdminPage';
 import { BottomNav } from './components/BottomNav';
 import { AuthGate } from './components/AuthGate';
@@ -58,10 +59,18 @@ const App: React.FC = () => {
             <Route path="/deals/:id" element={<DealChatPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route
-              path="/arbitrator/*"
+              path="/arbitrator"
               element={
                 <RoleGuard role={UserRole.ARBITRATOR}>
                   <ArbitratorPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="/arbitrator/disputes/:id"
+              element={
+                <RoleGuard role={UserRole.ARBITRATOR}>
+                  <ArbitratorDisputePage />
                 </RoleGuard>
               }
             />
