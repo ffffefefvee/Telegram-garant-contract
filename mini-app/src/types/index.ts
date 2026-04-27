@@ -185,6 +185,39 @@ export interface MakeDecisionInput {
   appealPeriodHours?: number;
 }
 
+export interface AdminDashboardStats {
+  users: { total: number };
+  deals: { total: number };
+  finance: { volume: number };
+}
+
+export interface AdminDisputeStats {
+  total: number;
+  byStatus?: Record<string, number>;
+  byType?: Record<string, number>;
+  avgResolutionHours?: number;
+}
+
+export interface PaginatedList<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ArbitratorPerformanceRow {
+  id: string;
+  userId: string;
+  username?: string;
+  status: ArbitratorStatus;
+  rating: number;
+  totalCases: number;
+  appealedCases: number;
+  overturnedCases: number;
+  averageRating: number;
+  totalEarned: number;
+}
+
 export interface AuthSession {
   accessToken: string;
   expiresIn: number;
