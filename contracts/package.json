@@ -8,6 +8,8 @@
     "deploy:polygon": "hardhat run scripts/deploy.ts --network polygon",
     "deploy:bsc": "hardhat run scripts/deploy.ts --network bsc",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "smoke:amoy": "hardhat run scripts/e2e-testnet.ts --network polygonAmoy",
+    "smoke:local": "hardhat run scripts/e2e-testnet.ts --network localhost",
     "test": "hardhat test",
     "coverage": "hardhat coverage",
     "verify": "hardhat verify"
