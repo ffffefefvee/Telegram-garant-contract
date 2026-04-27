@@ -20,6 +20,7 @@ import {
 } from './entities/enums/arbitration.enum';
 import { OpenDisputeDto, AssignArbitratorDto, UpdateDisputeStatusDto } from './dto';
 import { ArbitrationSettingsService } from './arbitration-settings.service';
+import { OutboxService } from '../ops/outbox.service';
 
 /**
  * Сервис для управления спорами (FSM)
@@ -39,6 +40,7 @@ export class DisputeService {
     private readonly userRepository: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly settingsService: ArbitrationSettingsService,
+    private readonly outbox: OutboxService,
   ) {}
 
   /**
@@ -136,6 +138,23 @@ export class DisputeService {
       deal.disputedAt = new Date();
       await queryRunner.manager.save(deal);
 
+      // Нотификация оппоненту (не открывшему спор)
+      const opponentUserId = isBuyer ? deal.sellerId : deal.buyerId;
+      await this.outbox.enqueue({
+        aggregateType: 'dispute',
+        aggregateId: dispute.id,
+        eventType: 'dispute.opened',
+        payload: {
+          disputeId: dispute.id,
+          dealId: deal.id,
+          dealTitle: deal.title ?? `Deal ${deal.id}`,
+          reason: dto.reason,
+          openerUserId: userId,
+          opponentUserId,
+        },
+        manager: queryRunner.manager,
+      });
+
       await queryRunner.commitTransaction();
 
       // Загрузка отношений
@@ -213,6 +232,22 @@ export class DisputeService {
         },
       });
       await queryRunner.manager.save(event);
+
+      // Нотификация арбитру
+      await this.outbox.enqueue({
+        aggregateType: 'dispute',
+        aggregateId: dispute.id,
+        eventType: 'dispute.arbitrator_assigned',
+        payload: {
+          disputeId: dispute.id,
+          dealTitle: dispute.deal?.title ?? `Deal ${dispute.dealId}`,
+          dealAmount: dispute.deal?.amount ?? null,
+          arbitratorUserId,
+          decisionDueAt: dispute.decisionDueAt?.toISOString() ?? null,
+          isAutoAssigned,
+        },
+        manager: queryRunner.manager,
+      });
 
       await queryRunner.commitTransaction();
 

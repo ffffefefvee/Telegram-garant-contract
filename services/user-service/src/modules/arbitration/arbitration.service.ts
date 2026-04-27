@@ -19,6 +19,7 @@ import { ArbitrationSettingsService } from './arbitration-settings.service';
 import { DisputeService } from './dispute.service';
 import { EvidenceService } from './evidence.service';
 import { ArbitratorService } from './arbitrator.service';
+import { OutboxService } from '../ops/outbox.service';
 
 /**
  * Основной сервис арбитража
@@ -41,6 +42,7 @@ export class ArbitrationService {
     private readonly disputeService: DisputeService,
     private readonly evidenceService: EvidenceService,
     private readonly arbitratorService: ArbitratorService,
+    private readonly outbox: OutboxService,
   ) {}
 
   // === Deal Terms ===
@@ -154,6 +156,22 @@ export class ArbitrationService {
 
     // Обновление статистики арбитра
     await this.arbitratorService.completeCase(arbitratorUserId, arbitratorFee);
+
+    // Нотификация buyer + seller о принятом решении
+    await this.outbox.enqueue({
+      aggregateType: 'dispute',
+      aggregateId: disputeId,
+      eventType: 'dispute.decision_made',
+      payload: {
+        disputeId,
+        dealTitle: dispute.deal?.title ?? `Deal ${dispute.dealId}`,
+        buyerUserId: dispute.deal?.buyerId ?? null,
+        sellerUserId: dispute.deal?.sellerId ?? null,
+        buyerShare: distribution.refundToBuyer,
+        sellerShare: distribution.paymentToSeller,
+        decisionType: dto.decisionType,
+      },
+    });
 
     return decision;
   }

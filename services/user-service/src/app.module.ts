@@ -44,6 +44,8 @@ import { StoreModule } from './modules/store/store.module';
 import { Store, StoreBot, StoreSettings, StoreTemplate } from './modules/store/entities/store.entity';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { OpsModule } from './modules/ops/ops.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { NotificationPreference } from './modules/notifications/entities/notification-preference.entity';
 import {
   SystemAlert,
   HealthCheck,
@@ -101,6 +103,7 @@ import {
               SystemMetrics,
               RecoveryLog,
               JobSchedule,
+              NotificationPreference,
             ],
 synchronize: true,
             logging: configService.get('NODE_ENV') === 'development',
@@ -147,6 +150,7 @@ synchronize: true,
             SystemMetrics,
             RecoveryLog,
             JobSchedule,
+            NotificationPreference,
           ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: true,
@@ -197,6 +201,7 @@ synchronize: true,
     StoreModule,
     MonitoringModule,
     OpsModule,
+    NotificationsModule,
   ],
   exports: [
     AdminModule,
