@@ -1,6 +1,13 @@
-import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
+import { ethers } from 'ethers';
 import { User, UserStatus, UserType } from './entities/user.entity';
 import { UserSession, SessionType } from './entities/user-session.entity';
 import { LanguagePreference, LanguageCode } from './entities/language-preference.entity';
@@ -127,6 +134,55 @@ export class UserService {
     user.updatedAt = new Date();
 
     return this.userRepository.save(user);
+  }
+
+  /**
+   * Attach an EVM wallet to the user. Validates the address format,
+   * checksums it, and rejects if the same address is already attached
+   * to a different (active) user — wallet uniqueness is required for
+   * unambiguous payout routing.
+   */
+  async attachWallet(userId: string, walletAddress: string): Promise<User> {
+    if (!ethers.isAddress(walletAddress)) {
+      throw new BadRequestException(
+        `Not a valid EVM address: "${walletAddress}"`,
+      );
+    }
+    if (walletAddress === ethers.ZeroAddress) {
+      throw new BadRequestException('Wallet cannot be the zero address');
+    }
+    const checksummed = ethers.getAddress(walletAddress);
+
+    const existing = await this.userRepository.findOne({
+      where: { walletAddress: checksummed, deletedAt: IsNull() },
+    });
+    if (existing && existing.id !== userId) {
+      throw new ConflictException(
+        `Wallet ${checksummed} is already attached to another account`,
+      );
+    }
+
+    const user = await this.findById(userId);
+    user.walletAddress = checksummed;
+    user.walletAttachedAt = new Date();
+    user.updatedAt = new Date();
+    const saved = await this.userRepository.save(user);
+    this.logger.log(`Wallet attached: user=${userId} wallet=${checksummed}`);
+    return saved;
+  }
+
+  /**
+   * Detach the wallet. Used when the user wants to swap addresses.
+   * Does NOT delete the user.
+   */
+  async detachWallet(userId: string): Promise<User> {
+    const user = await this.findById(userId);
+    user.walletAddress = null;
+    user.walletAttachedAt = null;
+    user.updatedAt = new Date();
+    const saved = await this.userRepository.save(user);
+    this.logger.log(`Wallet detached: user=${userId}`);
+    return saved;
   }
 
   async updateTelegramUser(

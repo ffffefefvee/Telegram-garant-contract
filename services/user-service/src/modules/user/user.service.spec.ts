@@ -344,4 +344,76 @@ describe('UserService', () => {
       expect(result.balance).toBe(0);
     });
   });
+
+  describe('attachWallet', () => {
+    const VALID = '0x' + 'a'.repeat(40);
+
+    it('rejects invalid EVM address strings', async () => {
+      await expect(service.attachWallet('test-uuid-123', 'not-an-address')).rejects.toThrow(
+        /valid EVM address/,
+      );
+    });
+
+    it('rejects the zero address', async () => {
+      await expect(
+        service.attachWallet('test-uuid-123', '0x0000000000000000000000000000000000000000'),
+      ).rejects.toThrow(/zero address/);
+    });
+
+    it('rejects when address is already attached to a different user', async () => {
+      mockUserRepository.findOne.mockImplementation(async ({ where }: any) => {
+        if (where.walletAddress) {
+          return { id: 'someone-else', walletAddress: where.walletAddress };
+        }
+        return mockUser;
+      });
+      await expect(service.attachWallet('test-uuid-123', VALID)).rejects.toThrow(
+        /already attached/,
+      );
+    });
+
+    it('attaches a checksummed address and timestamps walletAttachedAt', async () => {
+      const target = { ...mockUser, walletAddress: null, walletAttachedAt: null };
+      mockUserRepository.findOne.mockImplementation(async ({ where }: any) => {
+        if (where.walletAddress) return null; // not in use
+        if (where.id) return target;
+        return null;
+      });
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      const result = await service.attachWallet('test-uuid-123', VALID);
+
+      expect(result.walletAddress).toMatch(/^0x[0-9a-fA-F]{40}$/);
+      expect(result.walletAttachedAt).toBeInstanceOf(Date);
+    });
+
+    it('is idempotent when the same user re-attaches the same wallet', async () => {
+      const target = { ...mockUser, id: 'test-uuid-123', walletAddress: VALID };
+      mockUserRepository.findOne.mockImplementation(async ({ where }: any) => {
+        if (where.walletAddress) return target;
+        if (where.id) return target;
+        return null;
+      });
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      await expect(service.attachWallet('test-uuid-123', VALID)).resolves.toBeDefined();
+    });
+  });
+
+  describe('detachWallet', () => {
+    it('clears walletAddress and walletAttachedAt', async () => {
+      const target = {
+        ...mockUser,
+        walletAddress: '0x' + 'b'.repeat(40),
+        walletAttachedAt: new Date(),
+      };
+      mockUserRepository.findOne.mockResolvedValue(target);
+      mockUserRepository.save.mockImplementation(async (u: User) => u);
+
+      const result = await service.detachWallet('test-uuid-123');
+
+      expect(result.walletAddress).toBeNull();
+      expect(result.walletAttachedAt).toBeNull();
+    });
+  });
 });

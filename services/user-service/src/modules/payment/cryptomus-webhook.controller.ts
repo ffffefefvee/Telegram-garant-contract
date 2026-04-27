@@ -8,10 +8,21 @@ import {
   Logger,
 } from '@nestjs/common';
 import { CryptomusService, CryptomusWebhookPayload } from './cryptomus.service';
-import { PaymentService } from './payment.service';
+import { PaymentWebhookService } from './payment-webhook.service';
 
 /**
- * Контроллер для обработки Webhook от Cryptomus
+ * Cryptomus calls this endpoint on every payment status change. The body
+ * arrives as JSON; the `sign` header is an MD5(base64(JSON) || apiKey) HMAC
+ * which we verify with `CryptomusService.handleWebhook`.
+ *
+ * Cryptomus expects `{ state: 0 }` for success and `{ state: 1 }` for any
+ * error it should retry. We return `state: 0` for everything that we
+ * accepted and recorded — even partials (e.g. wallets not yet attached) —
+ * because returning 1 causes Cryptomus to retry forever and the partial
+ * cases are handled by reconciliation (PR 6/6), not by the webhook retry.
+ *
+ * Mounted at `/api/webhook/cryptomus`. Excluded from `RequireAuthMiddleware`
+ * (see AuthModule).
  */
 @Controller('api/webhook/cryptomus')
 export class CryptomusWebhookController {
@@ -19,41 +30,37 @@ export class CryptomusWebhookController {
 
   constructor(
     private readonly cryptomusService: CryptomusService,
-    private readonly paymentService: PaymentService,
+    private readonly paymentWebhook: PaymentWebhookService,
   ) {}
 
-  /**
-   * Обработка Callback от Cryptomus
-   *
-   * Cryptomus отправляет POST запрос при изменении статуса платежа
-   */
   @Post()
   @HttpCode(HttpStatus.OK)
   async handleWebhook(
     @Body() payload: CryptomusWebhookPayload,
     @Headers('sign') signature: string,
-  ): Promise<{ state: number }> {
-    this.logger.log(`Webhook received: ${JSON.stringify(payload)}`);
+  ): Promise<{ state: number; processed?: object }> {
+    this.logger.log(
+      `Webhook received: order=${payload?.order_id} status=${payload?.status}`,
+    );
+
+    const isValid = await this.cryptomusService.handleWebhook(payload, signature);
+    if (!isValid) {
+      this.logger.error(`Invalid webhook signature for order=${payload?.order_id}`);
+      // state=1 tells Cryptomus we did NOT accept the call. They retry.
+      return { state: 1 };
+    }
 
     try {
-      // Верифицируем подпись и обрабатываем
-      const isValid = await this.cryptomusService.handleWebhook(
-        payload,
-        signature,
+      const result = await this.paymentWebhook.handlePaymentWebhook(payload);
+      return { state: 0, processed: result };
+    } catch (err) {
+      // Anything thrown here is genuinely unexpected (invariant breach, DB
+      // outage). Cryptomus retries on state=1, which is the right behaviour.
+      this.logger.error(
+        `Webhook processing error for order=${payload?.order_id}: ${(err as Error).message}`,
+        (err as Error).stack,
       );
-
-      if (!isValid) {
-        this.logger.error('Invalid webhook signature');
-        return { state: 1 }; // Ошибка
-      }
-
-      // Обновляем статус платежа в БД
-      await this.paymentService.handlePaymentWebhook(payload);
-
-      return { state: 0 }; // Успех
-    } catch (error) {
-      this.logger.error(`Webhook processing error: ${error.message}`, error.stack);
-      return { state: 1 }; // Ошибка
+      return { state: 1 };
     }
   }
 }
