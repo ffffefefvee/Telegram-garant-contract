@@ -11,11 +11,18 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   ParseIntPipe,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { UserService, CreateUserDto, UpdateUserDto } from './user.service';
 import { User, UserStatus, UserType } from './entities/user.entity';
 import { SessionType } from './entities/user-session.entity';
 import { LanguageCode } from './entities/language-preference.entity';
+
+export class AttachWalletDto {
+  walletAddress: string;
+}
 
 @Controller('users')
 export class UserController {
@@ -39,10 +46,58 @@ export class UserController {
     return this.userService.findByEmail(email);
   }
 
+  /**
+   * GET /api/users/me
+   *
+   * Returns the canonical User row for the JWT bearer. Loads from the DB
+   * (not just the cached middleware payload) so callers see current
+   * settings, wallet address, etc.
+   */
   @Get('me')
-  async getCurrentUser(@Headers() headers: any): Promise<User> {
-    const user = (headers as any).user;
-    return user;
+  async getCurrentUser(@Req() req: Request): Promise<User> {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('Not authenticated');
+    }
+    return this.userService.findById(userId);
+  }
+
+  /**
+   * POST /api/users/me/wallet
+   * Body: { walletAddress: "0x..." }
+   *
+   * Attaches an EVM wallet to the current user. Required before the user
+   * can participate in any deal that needs on-chain settlement (sellers
+   * receive USDT here, buyers' deals are routed to clones predicated on
+   * both parties having a wallet).
+   */
+  @Post('me/wallet')
+  @HttpCode(HttpStatus.OK)
+  async attachWallet(
+    @Req() req: Request,
+    @Body() body: AttachWalletDto,
+  ): Promise<User> {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('Not authenticated');
+    }
+    return this.userService.attachWallet(userId, body?.walletAddress ?? '');
+  }
+
+  /**
+   * DELETE /api/users/me/wallet
+   *
+   * Detaches the wallet. The user must re-attach before participating
+   * in any new on-chain deal. Existing escrows are unaffected.
+   */
+  @Delete('me/wallet')
+  @HttpCode(HttpStatus.OK)
+  async detachWallet(@Req() req: Request): Promise<User> {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedException('Not authenticated');
+    }
+    return this.userService.detachWallet(userId);
   }
 
   @Get(':id')

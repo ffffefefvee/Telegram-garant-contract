@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from './entities/payment.entity';
 import { CommissionRate } from './entities/commission-rate.entity';
 import { CurrencyRate } from './entities/currency-rate.entity';
+import { Deal } from '../deal/entities/deal.entity';
 import { PaymentService } from './payment.service';
 import { PaymentController, WebhookController } from './payment.controller';
 import { CryptomusService } from './cryptomus.service';
@@ -10,12 +11,14 @@ import { CryptomusWebhookController } from './cryptomus-webhook.controller';
 import { PaymentWebhookService } from './payment-webhook.service';
 import { DealModule } from '../deal/deal.module';
 import { UserModule } from '../user/user.module';
+import { EscrowModule } from '../escrow/escrow.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payment, CommissionRate, CurrencyRate]),
+    TypeOrmModule.forFeature([Payment, CommissionRate, CurrencyRate, Deal]),
     forwardRef(() => DealModule),
     forwardRef(() => UserModule),
+    EscrowModule,
   ],
   controllers: [PaymentController, WebhookController, CryptomusWebhookController],
   providers: [PaymentService, CryptomusService, PaymentWebhookService],
