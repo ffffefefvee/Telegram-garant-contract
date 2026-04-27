@@ -7,7 +7,7 @@ on:
 
 jobs:
   contracts:
-    name: Contracts (Hardhat compile + tests)
+    name: Contracts (Hardhat compile + tests + coverage)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -24,7 +24,36 @@ jobs:
       - name: Compile contracts
         run: npx hardhat compile
       - name: Run contract tests
-        run: npx hardhat test || echo "No tests yet"
+        run: npx hardhat test
+      - name: Run coverage
+        run: npx hardhat coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: contracts/coverage/
+
+  slither:
+    name: Contracts (Slither static analysis)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: contracts/package-lock.json
+      - name: Install npm deps
+        working-directory: contracts
+        run: npm ci
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.0
+        id: slither
+        with:
+          target: 'contracts/'
+          fail-on: 'high'
+          slither-args: '--exclude-informational --exclude-low'
+          solc-version: '0.8.20'
 
   user-service:
     name: User Service (build + lint + tests)

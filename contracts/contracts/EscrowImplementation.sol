@@ -80,7 +80,6 @@ contract EscrowImplementation is Initializable, ReentrancyGuard {
     error NotSeller();
     error NotParty();
     error NotRelay();
-    error NotFactory();
     error NotAssignedArbitrator();
     error WrongStatus();
     error InvalidShares();
@@ -107,11 +106,6 @@ contract EscrowImplementation is Initializable, ReentrancyGuard {
 
     modifier onlyRelay() {
         if (msg.sender != relay) revert NotRelay();
-        _;
-    }
-
-    modifier onlyFactory() {
-        if (msg.sender != factory) revert NotFactory();
         _;
     }
 
