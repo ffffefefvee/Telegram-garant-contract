@@ -28,11 +28,11 @@
 | # | Решение | Значение | Обоснование |
 |---|---------|----------|-------------|
 | D1 | Custody | Non-custodial payout; light-custody на funding (Cryptomus relay) | Cryptomus не разрешает произвольный `to_address` в инвойсе → backend становится relay'ем. Деньги физически проходят через hot-wallet платформы между webhook и on-chain forward. Payout продавцу — прямо из эскроу в его Web3-кошелёк. |
-| D2 | Сеть и токен (MVP) | Polygon, USDT (USDT.e или native USDT — уточняем при деплое) | Низкий газ, ликвидность, поддержка Cryptomus. BSC — Phase 2. TRON/TON — позже. |
-| D3 | Тип сделки (MVP) | Только digital goods | Нет доставки, нет «оспорить качество товара», единственный critical path: «получил доступ → подтвердил». |
-| D4 | Комиссия | Дефолт 50/50, при создании сделки можно выбрать 100/0 (на покупателе) или 0/100 (на продавце) | Скамят чаще продавцы, безопасность нужна обеим сторонам. Перенос — только до funding'а, не во время спора. |
-| D5 | Размер комиссии | 5% от суммы сделки (sum of both sides) | Стандарт для escrow-сервисов. Параметризуется в `EscrowFactory`. |
-| D6 | Минимальная сумма | $10 USDT | Покрывает газ + комиссию Cryptomus + нашу 5% + остаётся ощутимо. |
+| D2 | Сеть и токен в эскроу (MVP) | Polygon, USDT (USDT.e или native USDT — уточняем при деплое). **Валюта котировки** — на выбор продавца при создании сделки: `RUB` или `USDT`. | Эскроу всегда в USDT (нужен один токен on-chain). UI и платёж идут в выбранной валюте; курс RUB→USDT фиксируется в момент funding'а через Cryptomus rate snapshot. BSC — Phase 2. TRON/TON — позже. |
+| D3 | Тип сделки (MVP) | Digital goods, 5 подкатегорий: (1) аккаунт, (2) ключ/код активации, (3) цифровой файл, (4) онлайн-услуга, (5) перенос подписки | Нет доставки, нет «оспорить качество товара», единственный critical path: «получил доступ → подтвердил». Контракт и FSM одинаковы для всех 5 — различаются только поля формы и шаблоны evidence в споре (см. §6.2). |
+| D4 | Распределение комиссии | Дефолт 50/50, при создании сделки можно выбрать 100/0 (на покупателе) или 0/100 (на продавце) | Скамят чаще продавцы, безопасность нужна обеим сторонам. Перенос — только до funding'а, не во время спора. |
+| D5 | Тариф комиссии | **Тарифная сетка**: при сумме сделки `< 1000 ₽` — фикс **50 ₽**; при `≥ 1000 ₽` — **5%** от суммы. Для сделок в USDT — пересчёт по курсу RUB→USDT в момент funding'а (`< $11` → ~$0.55 фикс, `≥ $11` → 5%). Распределение между сторонами по D4. | На мелких сделках процентная комиссия не покрывает себестоимость спора; фикс делает мелочёвку безубыточной. Параметризуется в `EscrowFactory` (порог + ставки). |
+| D6 | Минимальная сумма | **300 ₽** или эквивалент в USDT по курсу на момент создания сделки (~$3.30). | Покрывает газ + комиссию Cryptomus + наши 50 ₽ фикс + остаётся продавцу около 220-240 ₽. |
 | D7 | Арбитраж (MVP) | Централизованный пул, 1 арбитр на спор, апелляция → второй арбитр | Decentralized — Phase 3+. На старте арбитров нанимаем (см. §11). |
 | D8 | Юрисдикция юрлица | TBD — блокирующий вопрос для legal-фазы перед публичным запуском | Не блокирует разработку MVP, но блокирует closed beta с реальными деньгами. |
 | D9 | Контрактный паттерн | EIP-1167 minimal proxy clones + Factory с `cloneDeterministic(salt = dealId)` | Газ ~45k на клон вместо ~1M+. Адрес вычисляется заранее (CREATE2) → показываем покупателю до деплоя. |
@@ -49,8 +49,9 @@
 ```
 [1] Покупатель в боте → /new_deal
     → выбирает тип "digital goods", описывает что покупает
-    → указывает цену в USD (USDT) и валюту, в которой хочет ОПЛАЧИВАТЬ
-    → выбирает модель комиссии (50/50 / 100% buyer / 100% seller)
+    → указывает цену сделки и **валюту котировки** (RUB или USDT — выбор продавца при акцепте, см. шаг [4])
+    → выбирает модель распределения комиссии (50/50 / 100% buyer / 100% seller)
+    → платёжная валюта на стороне Cryptomus — отдельно, выбирает покупатель на платёжной странице (RUB карта, USDT, BTC, ...)
 
 [2] Backend генерирует invite-ссылку с deal_id
     → детерминированно вычисляет будущий адрес escrow (CREATE2)
@@ -120,7 +121,7 @@
 | Контракт | Назначение | Изменяемость |
 |----------|-----------|--------------|
 | `EscrowImplementation.sol` | Логика одного эскроу (за которым клонится множество proxy) | Immutable, новая версия = новый адрес |
-| `EscrowFactory.sol` | Деплой клонов через `Clones.cloneDeterministic`, конфиг комиссии, регистр арбитров | Owner-controlled, через TimelockController |
+| `EscrowFactory.sol` | Деплой клонов через `Clones.cloneDeterministic`, конфиг **тарифной сетки** (порог + ставки + флэт), регистр арбитров | Owner-controlled, через TimelockController |
 | `PlatformTreasury.sol` | Аккумулирует комиссии, multisig withdrawal | 2/3 multisig |
 | `ArbitratorRegistry.sol` | On-chain whitelist арбитров (для прозрачности и аудита) | Owner-controlled |
 
@@ -134,12 +135,13 @@ address public buyer;
 address public seller;
 bytes32 public dealId;
 uint256 public amount;
-uint16  public buyerFeeBps;   // 500 = 5%
-uint16  public sellerFeeBps;
+uint256 public buyerFee;      // абсолютная сумма в USDT-wei, рассчитана фабрикой по тарифной сетке (D5)
+uint256 public sellerFee;     // абсолютная сумма в USDT-wei
+// Примечание: для < $11 экв. — фикс ~$0.55, иначе 5% от amount; распределение между buyer/seller — по D4.
 uint64  public fundingDeadline;
 
 // Lifecycle (called by factory or relay only)
-function initialize(address buyer, address seller, bytes32 dealId, uint256 amount, uint16 buyerFeeBps, uint16 sellerFeeBps, uint64 fundingDeadline) external;
+function initialize(address buyer, address seller, bytes32 dealId, uint256 amount, uint256 buyerFee, uint256 sellerFee, uint64 fundingDeadline) external;
 function notifyFunded() external;       // called by relay after USDT transfer in
 function cancel() external;              // before FUNDED, by buyer or seller
 
@@ -281,7 +283,7 @@ src/modules/
 
 ### 7.1 Пользовательские страницы
 - `/` — список моих сделок (вкладки: Active / Completed / Disputed), кнопка «+ Новая сделка».
-- `/deal/new` — мастер создания сделки (тип → описание → цена → модель комиссии → invite-ссылка).
+- `/deal/new` — мастер создания сделки: (1) выбор подкатегории digital goods из 5 (аккаунт / ключ-код / файл / онлайн-услуга / перенос подписки) → (2) описание + поля под подкатегорию → (3) цена + валюта котировки (RUB / USDT) → (4) модель распределения комиссии → (5) invite-ссылка.
 - `/deal/:id` — страница сделки: условия, чат, статус, линк на контракт в эксплоере, кнопки действий (Confirm receipt / Cancel / Open dispute), все через MainButton/inline.
 - `/dispute/:id` — flow для evidence (форма со слотами, drag-and-drop файлов) + просмотр решения.
 - `/profile` — мой профиль, отзывы на меня, payout-адрес (с QR-сканером), trust score, настройки.
@@ -354,8 +356,13 @@ src/modules/
 
 ```
 users (id, telegram_id, telegram_username, payout_address, role, kyc_status, ...)
-deals (id, deal_number, type, status, buyer_id, seller_id, amount_usd, fee_model,
+deals (id, deal_number, type, subcategory, status, buyer_id, seller_id,
+       amount_quote, quote_currency,        -- цена в выбранной валюте (RUB | USDT)
+       amount_usdt, fx_rate_locked_at,      -- зафиксированный эквивалент в USDT в момент funding
+       fee_model, fee_buyer_usdt, fee_seller_usdt,  -- по тарифной сетке D5 + распределение D4
        escrow_address, funding_invoice_id, fsm_state, created_at, ...)
+-- subcategory ∈ {ACCOUNT, KEY_CODE, FILE, ONLINE_SERVICE, SUBSCRIPTION_TRANSFER}
+-- quote_currency ∈ {RUB, USDT}; ESCROW всегда в USDT on-chain
 deal_messages (id, deal_id, author_id, content, content_hash, created_at)
 deal_attachments (id, deal_id, message_id, s3_key, sha256, size, ...)
 deal_events (id, deal_id, type, payload, created_at)  -- audit log
