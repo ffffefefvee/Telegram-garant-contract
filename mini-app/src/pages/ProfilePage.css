@@ -1,6 +1,33 @@
 .profile-page {
   padding: 16px;
+  padding-bottom: 80px;
   min-height: 100vh;
+}
+
+.profile-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.role-chip {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  color: var(--tg-theme-text-color, #000);
+}
+
+.role-chip.role-arbitrator {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.role-chip.role-admin {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .profile-header {

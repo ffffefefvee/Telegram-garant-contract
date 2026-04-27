@@ -1,3 +1,11 @@
+export const UserRole = {
+  BUYER: 'buyer',
+  SELLER: 'seller',
+  ARBITRATOR: 'arbitrator',
+  ADMIN: 'admin',
+} as const;
+export type UserRole = (typeof UserRole)[keyof typeof UserRole];
+
 export interface User {
   id: string;
   telegramId: number;
@@ -6,13 +14,15 @@ export interface User {
   telegramLastName?: string;
   telegramLanguageCode?: string;
   email?: string;
-  status: 'active' | 'inactive' | 'banned';
-  roles: string[];
+  status: 'active' | 'inactive' | 'banned' | 'pending_verification';
+  roles: UserRole[];
   balance: number;
   reputationScore: number;
   completedDeals: number;
   cancelledDeals: number;
   disputedDeals: number;
+  walletAddress?: string | null;
+  walletAttachedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -53,4 +63,69 @@ export interface Payment {
   currency: string;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   createdAt: string;
+}
+
+export interface AuthSession {
+  accessToken: string;
+  expiresIn: number;
+  user: {
+    id: string;
+    telegramId: number;
+    telegramUsername: string | null;
+  };
+}
+
+/**
+ * Minimal Telegram WebApp surface we rely on. The real SDK exposes far more —
+ * we only type what is actually consumed.
+ */
+export interface TelegramWebApp {
+  initData: string;
+  initDataUnsafe?: {
+    user?: {
+      id: number;
+      first_name: string;
+      last_name?: string;
+      username?: string;
+      language_code?: string;
+    };
+    auth_date?: number;
+    hash?: string;
+  };
+  themeParams: {
+    bg_color?: string;
+    text_color?: string;
+    hint_color?: string;
+    link_color?: string;
+    button_color?: string;
+    button_text_color?: string;
+    secondary_bg_color?: string;
+  };
+  colorScheme?: 'light' | 'dark';
+  ready: () => void;
+  expand: () => void;
+  setHeaderColor: (color: string) => void;
+  setBackgroundColor: (color: string) => void;
+  onEvent: (eventType: string, handler: () => void) => void;
+  offEvent: (eventType: string, handler: () => void) => void;
+  HapticFeedback?: {
+    impactOccurred?: (style: string) => void;
+    notificationOccurred?: (type: string) => void;
+  };
+  MainButton?: {
+    text: string;
+    show: () => void;
+    hide: () => void;
+    onClick: (cb: () => void) => void;
+    offClick: (cb: () => void) => void;
+    setText: (text: string) => void;
+    enable: () => void;
+    disable: () => void;
+  };
+  BackButton?: {
+    show: () => void;
+    hide: () => void;
+    onClick: (cb: () => void) => void;
+    offClick: (cb: () => void) => void;
+  };
 }

@@ -1,10 +1,18 @@
 import React from 'react';
 import { useAppStore } from '../store/appStore';
-import { usersApi } from '../api';
+import { WalletCard } from '../components/WalletCard';
+import { UserRole } from '../types';
 import './ProfilePage.css';
 
+const ROLE_LABELS: Record<UserRole, string> = {
+  buyer: 'Покупатель',
+  seller: 'Продавец',
+  arbitrator: 'Арбитр',
+  admin: 'Администратор',
+};
+
 export const ProfilePage: React.FC = () => {
-  const { user } = useAppStore();
+  const { user, logout } = useAppStore();
 
   if (!user) {
     return (
@@ -27,6 +35,13 @@ export const ProfilePage: React.FC = () => {
           {user.telegramUsername && (
             <span className="profile-username">@{user.telegramUsername}</span>
           )}
+          <div className="profile-roles">
+            {user.roles.map((role) => (
+              <span key={role} className={`role-chip role-${role}`}>
+                {ROLE_LABELS[role] ?? role}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -44,6 +59,8 @@ export const ProfilePage: React.FC = () => {
           <span className="stat-label">Сделок</span>
         </div>
       </div>
+
+      <WalletCard />
 
       <div className="profile-deals-summary">
         <div className="deals-row">
@@ -75,7 +92,7 @@ export const ProfilePage: React.FC = () => {
           Помощь
         </button>
 
-        <button className="menu-item logout">
+        <button className="menu-item logout" onClick={logout}>
           <svg viewBox="0 0 24 24" width="20" height="20">
             <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
           </svg>

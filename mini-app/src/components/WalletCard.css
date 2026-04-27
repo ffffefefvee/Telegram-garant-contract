@@ -1,0 +1,76 @@
+.wallet-card {
+  background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.wallet-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.wallet-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wallet-badge {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.wallet-badge.attached {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.wallet-badge.missing {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.wallet-address {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--tg-theme-bg-color, #fff);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.wallet-hint {
+  color: var(--tg-theme-hint-color, #888);
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+
+.wallet-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--tg-theme-hint-color, #d1d5db);
+  border-radius: 8px;
+  background: var(--tg-theme-bg-color, #fff);
+  color: var(--tg-theme-text-color, #000);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.wallet-input:focus {
+  outline: none;
+  border-color: var(--tg-theme-button-color, #2481cc);
+}
+
+.wallet-error {
+  color: #b91c1c;
+  font-size: 13px;
+  margin: 8px 0 0;
+}

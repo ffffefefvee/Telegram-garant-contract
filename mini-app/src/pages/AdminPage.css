@@ -1,0 +1,27 @@
+.admin-page {
+  padding: 16px;
+  padding-bottom: 80px;
+}
+
+.admin-header h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.admin-subtitle {
+  margin: 0 0 24px;
+  color: var(--tg-theme-hint-color, #999);
+  font-size: 14px;
+}
+
+.admin-placeholder {
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  color: var(--tg-theme-hint-color, #999);
+  text-align: center;
+}
+
+.admin-placeholder p {
+  margin: 4px 0;
+}

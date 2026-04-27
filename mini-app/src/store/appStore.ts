@@ -1,10 +1,14 @@
 import { create } from 'zustand';
-import { User, Deal, Message } from '../types';
+import { authApi } from '../api';
+import type { Deal, Message, User } from '../types';
+
+export type AuthStatus = 'idle' | 'pending' | 'authenticated' | 'error';
 
 interface AppState {
-  // User
+  // Auth
   user: User | null;
-  isAuthenticated: boolean;
+  authStatus: AuthStatus;
+  authError: string | null;
 
   // Current deal
   currentDeal: Deal | null;
@@ -17,6 +21,7 @@ interface AppState {
 
   // Actions
   setUser: (user: User | null) => void;
+  setAuthStatus: (status: AuthStatus, error?: string | null) => void;
   setCurrentDeal: (deal: Deal | null) => void;
   addMessage: (message: Message) => void;
   setMessages: (messages: Message[]) => void;
@@ -27,27 +32,31 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  // Initial state
   user: null,
-  isAuthenticated: false,
+  authStatus: 'idle',
+  authError: null,
   currentDeal: null,
   messages: [],
   isLoading: false,
   error: null,
   theme: 'light',
 
-  // Actions
-  setUser: (user) => set({ 
-    user, 
-    isAuthenticated: !!user,
-    isLoading: false 
-  }),
+  setUser: (user) =>
+    set({
+      user,
+      authStatus: user ? 'authenticated' : 'idle',
+      authError: null,
+      isLoading: false,
+    }),
+
+  setAuthStatus: (authStatus, authError = null) => set({ authStatus, authError }),
 
   setCurrentDeal: (deal) => set({ currentDeal: deal }),
 
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message]
-  })),
+  addMessage: (message) =>
+    set((state) => ({
+      messages: [...state.messages, message],
+    })),
 
   setMessages: (messages) => set({ messages }),
 
@@ -58,13 +67,17 @@ export const useAppStore = create<AppState>((set) => ({
   setTheme: (theme) => set({ theme }),
 
   logout: () => {
-    localStorage.removeItem('auth_token');
+    authApi.logout();
     set({
       user: null,
-      isAuthenticated: false,
+      authStatus: 'idle',
+      authError: null,
       currentDeal: null,
       messages: [],
       error: null,
     });
   },
 }));
+
+export const hasRole = (user: User | null | undefined, role: string): boolean =>
+  !!user && Array.isArray(user.roles) && user.roles.includes(role as never);
