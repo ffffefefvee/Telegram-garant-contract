@@ -43,6 +43,7 @@ import { DealGateway } from './modules/deal/deal.gateway';
 import { StoreModule } from './modules/store/store.module';
 import { Store, StoreBot, StoreSettings, StoreTemplate } from './modules/store/entities/store.entity';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
+import { OpsModule } from './modules/ops/ops.module';
 import {
   SystemAlert,
   HealthCheck,
@@ -195,6 +196,7 @@ synchronize: true,
     AdminModule,
     StoreModule,
     MonitoringModule,
+    OpsModule,
   ],
   exports: [
     AdminModule,
