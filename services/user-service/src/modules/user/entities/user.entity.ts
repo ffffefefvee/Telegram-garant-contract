@@ -95,6 +95,18 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   bannedAt: Date | null;
 
+  /**
+   * EVM wallet address used to receive escrow payouts (sellers) or sign
+   * arbitrator transactions. NULL until the user attaches a wallet via the
+   * mini-app. Stored lowercase, validated as 0x-prefixed 20-byte hex.
+   */
+  @Column({ type: 'varchar', length: 42, nullable: true })
+  @Index()
+  walletAddress: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  walletAttachedAt: Date | null;
+
   @Column({ type: 'simple-json', default: '{}' })
   settings: Record<string, any>;
 

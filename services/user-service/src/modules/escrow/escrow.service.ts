@@ -1,292 +1,254 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ethers } from 'ethers';
+import { BlockchainProvider } from '../blockchain/blockchain.provider';
+import { FactoryClient } from '../blockchain/factory.client';
+import { EscrowClient } from '../blockchain/escrow.client';
+import { RelayService } from '../blockchain/relay.service';
+import {
+  EscrowStatus,
+  FeeModel,
+  FeeQuote,
+} from '../blockchain/blockchain.types';
 
 export interface EscrowCreationResult {
   dealId: string;
   escrowAddress: string;
   transactionHash: string;
+  buyerFee: bigint;
+  sellerFee: bigint;
 }
 
-export interface EscrowInfo {
+export interface EscrowSummary {
   address: string;
-  status: 'created' | 'funded' | 'released' | 'refunded' | 'disputed' | 'resolved';
+  status: 'awaiting_funding' | 'funded' | 'released' | 'refunded' | 'disputed' | 'resolved' | 'cancelled' | 'expired' | 'unknown';
   buyer: string;
   seller: string;
-  arbitrator: string;
-  amount: number;
+  amount: bigint;
+  buyerFee: bigint;
+  sellerFee: bigint;
+  fundingDeadline: number;
+  assignedArbitrator: string;
+  balance: bigint;
 }
 
+const STATUS_LABELS: Record<EscrowStatus, EscrowSummary['status']> = {
+  [EscrowStatus.NONE]: 'unknown',
+  [EscrowStatus.AWAITING_FUNDING]: 'awaiting_funding',
+  [EscrowStatus.FUNDED]: 'funded',
+  [EscrowStatus.RELEASED]: 'released',
+  [EscrowStatus.REFUNDED]: 'refunded',
+  [EscrowStatus.DISPUTED]: 'disputed',
+  [EscrowStatus.RESOLVED]: 'resolved',
+  [EscrowStatus.CANCELLED]: 'cancelled',
+  [EscrowStatus.EXPIRED]: 'expired',
+};
+
+/**
+ * Domain-level facade over the BlockchainModule. Translates between
+ * deal-IDs (UUIDs) and on-chain bytes32 salts, parses USDT amounts (6
+ * decimals), validates EVM addresses, and exposes a clean API to
+ * `DealService` and `ArbitrationService`.
+ *
+ * No ethers types leak out of this service to its callers — they get
+ * plain strings, bigints, and union-typed status labels.
+ *
+ * In stub mode (BLOCKCHAIN_* env vars missing), all methods return
+ * deterministic placeholder values so dev environments without an RPC
+ * still work end-to-end (deals get created, just without on-chain side).
+ */
 @Injectable()
-export class EscrowService implements OnModuleInit {
+export class EscrowService {
   private readonly logger = new Logger(EscrowService.name);
-  private provider: ethers.JsonRpcProvider | null = null;
-  private wallet: ethers.Wallet | null = null;
-  private factoryContract: ethers.Contract | null = null;
-  private factoryAddress: string;
-  private tokenAddress: string;
-  private isBlockchainEnabled: boolean = false;
+  private readonly DEFAULT_FUNDING_HOURS = 24;
 
-  private abi = [
-    "function createEscrow(bytes32 dealId, address buyer, address seller, address arbitrator, address token, uint256 amount) external returns (address)",
-    "function getEscrow(bytes32 dealId) external view returns (address)",
-    "function escrowExists(bytes32 dealId) external view returns (bool)",
-    "function getEscrowInfo(bytes32 dealId) external view returns (address escrow, address buyer, address seller, address arbitrator, uint256 amount, uint8 status)",
-    "function updatePlatformFee(uint256 newFeePercent) external",
-    "function platformFeePercent() external view returns (uint256)",
-    "function platformWallet() external view returns (address)",
-    "event EscrowCreated(address indexed escrow, bytes32 indexed dealId, address buyer, address seller, address arbitrator, address token)"
-  ];
+  constructor(
+    private readonly providerService: BlockchainProvider,
+    private readonly factory: FactoryClient,
+    private readonly escrowClient: EscrowClient,
+    private readonly relay: RelayService,
+  ) {}
 
-  constructor(private configService: ConfigService) {
-    this.factoryAddress = this.configService.get('ESCROW_FACTORY_ADDRESS', '');
-    this.tokenAddress = this.configService.get('USDT_CONTRACT_ADDRESS', '');
-  }
-
-  async onModuleInit() {
-    if (!this.factoryAddress || this.factoryAddress === '') {
-      this.logger.warn('ESCROW_FACTORY_ADDRESS not set. Escrow service running in DATABASE MODE.');
-      this.isBlockchainEnabled = false;
-      return;
-    }
-
-    const rpcUrl = this.configService.get('BLOCKCHAIN_RPC_URL', 'https://polygon-amoy.infura.io/v3/your_key');
-    const privateKey = this.configService.get('BLOCKCHAIN_PRIVATE_KEY', '');
-
-    if (!rpcUrl || !privateKey) {
-      this.logger.warn('Blockchain credentials not set. Escrow service running in DATABASE MODE.');
-      this.isBlockchainEnabled = false;
-      return;
-    }
-
-    try {
-      this.provider = new ethers.JsonRpcProvider(rpcUrl);
-      this.wallet = new ethers.Wallet(privateKey, this.provider);
-      this.factoryContract = new ethers.Contract(this.factoryAddress, this.abi, this.wallet);
-      this.isBlockchainEnabled = true;
-      this.logger.log(`Escrow Service initialized. Factory: ${this.factoryAddress}`);
-    } catch (error) {
-      this.logger.error('Failed to initialize blockchain connection. Running in DATABASE MODE.', error);
-      this.isBlockchainEnabled = false;
-    }
+  isEnabled(): boolean {
+    return this.providerService.isReady;
   }
 
   /**
-   * Создать escrow для сделки
-   * В DATABASE MODE - просто возвращает виртуальный адрес
+   * Quote the fee schedule for a deal. Pure view — no tx, safe to call from
+   * UI flows before the user confirms.
+   */
+  async quote(amountUsdt: number, feeModel: FeeModel = FeeModel.SPLIT_50_50): Promise<FeeQuote> {
+    const amount = this.toWei(amountUsdt);
+    return this.factory.quoteFee(amount, feeModel);
+  }
+
+  /**
+   * Predict the deterministic clone address for a dealId without deploying.
+   * Used by Cryptomus webhook flow to know where to route incoming USDT.
+   */
+  async predictAddress(dealId: string): Promise<string> {
+    const salt = RelayService.toBytes32(dealId);
+    return this.factory.predictAddress(salt);
+  }
+
+  /**
+   * Deploy the escrow clone for a deal. Caller must ensure both buyer and
+   * seller have valid EVM wallets attached. Returns the deployed clone
+   * address + transaction hash + computed fees.
+   *
+   * Defaults: feeModel=SPLIT_50_50, fundingDeadline=now+24h.
    */
   async createEscrow(
     dealId: string,
-    buyer: string,
-    seller: string,
-    arbitrator: string,
-    amount: number,
+    buyerWallet: string,
+    sellerWallet: string,
+    amountUsdt: number,
+    feeModel: FeeModel = FeeModel.SPLIT_50_50,
+    fundingDeadlineSec?: number,
   ): Promise<EscrowCreationResult> {
-    if (!this.isBlockchainEnabled || !this.factoryContract) {
-      const virtualAddress = ethers.Wallet.createRandom().address;
-      this.logger.log(`[DB MODE] Virtual escrow for deal ${dealId}: ${virtualAddress}`);
+    this.assertEvmAddress(buyerWallet, 'buyerWallet');
+    this.assertEvmAddress(sellerWallet, 'sellerWallet');
+    if (amountUsdt <= 0) {
+      throw new BadRequestException('amount must be positive');
+    }
+    const amount = this.toWei(amountUsdt);
+    const salt = RelayService.toBytes32(dealId);
+    const deadline =
+      fundingDeadlineSec ??
+      Math.floor(Date.now() / 1000) + this.DEFAULT_FUNDING_HOURS * 3600;
+
+    if (!this.providerService.isReady) {
+      const placeholder = ethers.getAddress(
+        '0x' + ethers.keccak256(ethers.toUtf8Bytes(dealId)).slice(26),
+      );
+      this.logger.warn(
+        `[stub] createEscrow dealId=${dealId} → ${placeholder} (blockchain disabled)`,
+      );
+      const quote = await this.factory.quoteFee(amount, feeModel);
       return {
         dealId,
-        escrowAddress: virtualAddress,
+        escrowAddress: placeholder,
         transactionHash: '0x' + '0'.repeat(64),
+        buyerFee: quote.buyerFee,
+        sellerFee: quote.sellerFee,
       };
     }
 
-    this.logger.log(`Creating escrow for deal ${dealId}...`);
-
-    const dealIdBytes32 = ethers.isBytesLike(dealId) ? dealId : ethers.keccak256(ethers.toUtf8Bytes(dealId));
-    const amountWei = ethers.parseUnits(amount.toString(), 6);
-
-    const tx = await this.factoryContract.createEscrow(
-      dealIdBytes32,
-      buyer,
-      seller,
-      arbitrator || ethers.ZeroAddress,
-      this.tokenAddress,
-      amountWei,
-    );
-
-    this.logger.log(`Transaction sent: ${tx.hash}`);
-    const receipt = await tx.wait();
-
-    const escrowAddress = await this.factoryContract.getEscrow(dealIdBytes32);
-    this.logger.log(`Escrow created for deal ${dealId} at ${escrowAddress}`);
-
+    const result = await this.relay.deployEscrow({
+      dealId: salt,
+      buyer: buyerWallet,
+      seller: sellerWallet,
+      amount,
+      feeModel,
+      fundingDeadline: deadline,
+    });
+    const quote = await this.factory.quoteFee(amount, feeModel);
     return {
       dealId,
-      escrowAddress,
-      transactionHash: receipt.hash,
+      escrowAddress: result.escrow,
+      transactionHash: result.txHash,
+      buyerFee: quote.buyerFee,
+      sellerFee: quote.sellerFee,
     };
   }
 
   /**
-   * Получить адрес escrow
+   * Look up the deployed clone for a dealId. Returns ZeroAddress if not yet deployed.
    */
   async getEscrowAddress(dealId: string): Promise<string> {
-    if (!this.isBlockchainEnabled) {
-      return '0x' + '0'.repeat(40);
-    }
-
-    const dealIdBytes32 = ethers.isBytesLike(dealId) ? dealId : ethers.keccak256(ethers.toUtf8Bytes(dealId));
-    return this.factoryContract!.getEscrow(dealIdBytes32);
+    const salt = RelayService.toBytes32(dealId);
+    return this.factory.escrowOf(salt);
   }
 
   /**
-   * Проверить существование escrow
+   * Forward USDT from the relay hot-wallet into a freshly-funded escrow,
+   * then call notifyFunded() on the clone. Called by the Cryptomus webhook
+   * after a payment is confirmed.
    */
-  async escrowExists(dealId: string): Promise<boolean> {
-    if (!this.isBlockchainEnabled) {
-      return true;
-    }
-
-    const dealIdBytes32 = ethers.isBytesLike(dealId) ? dealId : ethers.keccak256(ethers.toUtf8Bytes(dealId));
-    return this.factoryContract!.escrowExists(dealIdBytes32);
-  }
-
-  /**
-   * Освободить средства продавцу
-   */
-  async releaseFunds(dealId: string): Promise<string> {
-    if (!this.isBlockchainEnabled) {
-      this.logger.log(`[DB MODE] Release funds for deal ${dealId}`);
-      return '0x' + '0'.repeat(64);
-    }
-
+  async forwardAndFund(
+    dealId: string,
+    amountUsdt: number,
+  ): Promise<{ transferTxHash: string; notifyTxHash: string }> {
     const escrowAddress = await this.getEscrowAddress(dealId);
-    if (escrowAddress === ethers.ZeroAddress) {
-      throw new Error('Escrow not found');
+    if (!escrowAddress || escrowAddress === ethers.ZeroAddress) {
+      throw new BadRequestException(`Escrow not deployed for deal ${dealId}`);
     }
-
-    const escrowAbi = [
-      "function release() external",
-      "function status() external view returns (uint8)"
-    ];
-    const escrow = new ethers.Contract(escrowAddress, escrowAbi, this.wallet!);
-
-    const tx = await escrow.release();
-    const receipt = await tx.wait();
-
-    this.logger.log(`Funds released for deal ${dealId}. TX: ${receipt.hash}`);
-    return receipt.hash;
+    const amount = this.toWei(amountUsdt);
+    return this.relay.forwardAndFund(escrowAddress, amount);
   }
 
   /**
-   * Вернуть средства покупателю
+   * Read on-chain state of an escrow. Used by reconciliation and admin views.
+   * Returns null if the escrow doesn't exist on-chain or in stub mode.
    */
-  async refundFunds(dealId: string): Promise<string> {
-    if (!this.isBlockchainEnabled) {
-      this.logger.log(`[DB MODE] Refund funds for deal ${dealId}`);
-      return '0x' + '0'.repeat(64);
-    }
-
+  async getSummary(dealId: string): Promise<EscrowSummary | null> {
     const escrowAddress = await this.getEscrowAddress(dealId);
-    if (escrowAddress === ethers.ZeroAddress) {
-      throw new Error('Escrow not found');
-    }
-
-    const escrowAbi = ["function refund() external"];
-    const escrow = new ethers.Contract(escrowAddress, escrowAbi, this.wallet!);
-
-    const tx = await escrow.refund();
-    const receipt = await tx.wait();
-
-    this.logger.log(`Funds refunded for deal ${dealId}. TX: ${receipt.hash}`);
-    return receipt.hash;
-  }
-
-  /**
-   * Открыть спор
-   */
-  async openDispute(dealId: string): Promise<string> {
-    if (!this.isBlockchainEnabled) {
-      this.logger.log(`[DB MODE] Dispute opened for deal ${dealId}`);
-      return '0x' + '0'.repeat(64);
-    }
-
-    const escrowAddress = await this.getEscrowAddress(dealId);
-    if (escrowAddress === ethers.ZeroAddress) {
-      throw new Error('Escrow not found');
-    }
-
-    const escrowAbi = ["function dispute() external"];
-    const escrow = new ethers.Contract(escrowAddress, escrowAbi, this.wallet!);
-
-    const tx = await escrow.dispute();
-    const receipt = await tx.wait();
-
-    this.logger.log(`Dispute opened for deal ${dealId}. TX: ${receipt.hash}`);
-    return receipt.hash;
-  }
-
-  /**
-   * Разрешить спор (только для арбитра)
-   */
-  async resolveDispute(dealId: string, buyerPercent: number): Promise<string> {
-    if (!this.isBlockchainEnabled) {
-      this.logger.log(`[DB MODE] Dispute resolved for deal ${dealId} (buyer: ${buyerPercent}%)`);
-      return '0x' + '0'.repeat(64);
-    }
-
-    const escrowAddress = await this.getEscrowAddress(dealId);
-    if (escrowAddress === ethers.ZeroAddress) {
-      throw new Error('Escrow not found');
-    }
-
-    const escrowAbi = ["function resolve(uint256 buyerPercent) external"];
-    const escrow = new ethers.Contract(escrowAddress, escrowAbi, this.wallet!);
-
-    const tx = await escrow.resolve(buyerPercent);
-    const receipt = await tx.wait();
-
-    this.logger.log(`Dispute resolved for deal ${dealId}. TX: ${receipt.hash}`);
-    return receipt.hash;
-  }
-
-  /**
-   * Получить информацию об escrow
-   */
-  async getEscrowInfo(dealId: string): Promise<EscrowInfo | null> {
-    if (!this.isBlockchainEnabled) {
-      return {
-        address: '0x' + '0'.repeat(40),
-        status: 'funded',
-        buyer: '0x' + '0'.repeat(40),
-        seller: '0x' + '0'.repeat(40),
-        arbitrator: '0x' + '0'.repeat(40),
-        amount: 0,
-      };
-    }
-
-    const dealIdBytes32 = ethers.isBytesLike(dealId) ? dealId : ethers.keccak256(ethers.toUtf8Bytes(dealId));
-    const [escrow, buyer, seller, arbitrator, amount, status] = await this.factoryContract!.getEscrowInfo(dealIdBytes32);
-
-    if (escrow === ethers.ZeroAddress) {
+    if (!escrowAddress || escrowAddress === ethers.ZeroAddress) {
       return null;
     }
-
-    const statusMap: Record<number, EscrowInfo['status']> = {
-      0: 'created',
-      1: 'funded',
-      2: 'released',
-      3: 'refunded',
-      4: 'disputed',
-      5: 'resolved',
-    };
-
+    const snap = await this.escrowClient.snapshot(escrowAddress);
+    if (!snap) return null;
     return {
-      address: escrow,
-      status: statusMap[status] || 'created',
-      buyer,
-      seller,
-      arbitrator,
-      amount: parseFloat(ethers.formatUnits(amount, 6)),
+      address: snap.address,
+      status: STATUS_LABELS[snap.status] ?? 'unknown',
+      buyer: snap.buyer,
+      seller: snap.seller,
+      amount: snap.amount,
+      buyerFee: snap.buyerFee,
+      sellerFee: snap.sellerFee,
+      fundingDeadline: snap.fundingDeadline,
+      assignedArbitrator: snap.assignedArbitrator,
+      balance: snap.balance,
     };
   }
 
   /**
-   * Проверить, включен ли блокчейн режим
+   * Force-expire an unfunded escrow past its deadline. Anyone can call;
+   * we expose it here for cleanup jobs.
    */
-  isEnabled(): boolean {
-    return this.isBlockchainEnabled;
+  async expireUnfunded(dealId: string): Promise<string> {
+    const escrowAddress = await this.getEscrowAddress(dealId);
+    if (!escrowAddress || escrowAddress === ethers.ZeroAddress) {
+      throw new BadRequestException(`Escrow not deployed for deal ${dealId}`);
+    }
+    return this.relay.expireUnfunded(escrowAddress);
+  }
+
+  /**
+   * Assign an arbitrator to a disputed escrow. Caller must verify the
+   * arbitrator is eligible (registry.isEligible) BEFORE calling.
+   */
+  async assignArbitrator(dealId: string, arbitratorWallet: string): Promise<string> {
+    this.assertEvmAddress(arbitratorWallet, 'arbitratorWallet');
+    const escrowAddress = await this.getEscrowAddress(dealId);
+    if (!escrowAddress || escrowAddress === ethers.ZeroAddress) {
+      throw new BadRequestException(`Escrow not deployed for deal ${dealId}`);
+    }
+    return this.relay.assignArbitrator(escrowAddress, arbitratorWallet);
+  }
+
+  /**
+   * Convert USDT amount (6 decimals) to on-chain wei.
+   * @internal — exposed for tests and DealService.
+   */
+  toWei(amountUsdt: number): bigint {
+    if (!Number.isFinite(amountUsdt) || amountUsdt < 0) {
+      throw new BadRequestException(`Invalid USDT amount: ${amountUsdt}`);
+    }
+    return ethers.parseUnits(amountUsdt.toFixed(6), 6);
+  }
+
+  /**
+   * Validate an EVM address, throwing a 400 with a descriptive message.
+   * Accepts any case; canonical (checksummed) format is not enforced here.
+   */
+  private assertEvmAddress(address: string, fieldName: string): void {
+    if (!ethers.isAddress(address)) {
+      throw new BadRequestException(
+        `${fieldName} is not a valid EVM address: "${address}"`,
+      );
+    }
+    if (address === ethers.ZeroAddress) {
+      throw new BadRequestException(`${fieldName} cannot be the zero address`);
+    }
   }
 }

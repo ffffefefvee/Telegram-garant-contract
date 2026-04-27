@@ -25,8 +25,6 @@ import { DealStateMachine } from './fsm/deal-state-machine';
 import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 import { EscrowService } from '../escrow/escrow.service';
-import { ethers } from 'ethers';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface CreateDealDto {
   type: DealType;
@@ -141,29 +139,31 @@ export class DealService {
 
     const savedDeal = await this.dealRepository.save(deal);
 
-    // Попытка создать смарт-контракт эскроу
-    try {
-      // Примечание: для упрощения берем адреса из метаданных или используем заглушки
-      // В реальном приложении адреса кошельков должны быть в User entity
-      const buyerWallet = buyer.id; 
-      const sellerWallet = seller?.id || ethers.ZeroAddress;
-      const arbitrator = ethers.ZeroAddress;
-
-      const escrowResult = await this.escrowService.createEscrow(
-        savedDeal.id,
-        buyerWallet,
-        sellerWallet,
-        arbitrator,
-        savedDeal.amount,
+    // Deploy on-chain escrow only when both parties have wallets attached.
+    // Otherwise the deal stays in DRAFT/PENDING_ACCEPTANCE; the wallet
+    // attachment endpoint will retry deployment when the missing side
+    // attaches their wallet.
+    if (buyer.walletAddress && seller?.walletAddress) {
+      try {
+        const escrowResult = await this.escrowService.createEscrow(
+          savedDeal.id,
+          buyer.walletAddress,
+          seller.walletAddress,
+          Number(savedDeal.amount),
+        );
+        savedDeal.escrowAddress = escrowResult.escrowAddress;
+        await this.dealRepository.save(savedDeal);
+        this.logger.log(
+          `Escrow deployed: ${escrowResult.escrowAddress} for deal ${savedDeal.id}`,
+        );
+      } catch (error) {
+        this.logger.error(`Escrow deployment failed for deal ${savedDeal.id}`, error);
+        // Don't fail the whole deal — the user can re-trigger deployment later.
+      }
+    } else {
+      this.logger.log(
+        `Deal ${savedDeal.id} created without escrow: buyer.walletAddress=${!!buyer.walletAddress}, seller.walletAddress=${!!seller?.walletAddress}`,
       );
-
-      savedDeal.escrowAddress = escrowResult.escrowAddress;
-      await this.dealRepository.save(savedDeal);
-
-      this.logger.log(`Escrow created: ${escrowResult.escrowAddress}`);
-    } catch (error) {
-      this.logger.error(`Escrow creation failed for deal ${savedDeal.id}`, error);
-      // Сделка создается даже если эскроу не создан (для тестов)
     }
 
     // Создаём событие
