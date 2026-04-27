@@ -93,10 +93,6 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "user.service.spec.ts"
-    ]
+    "testEnvironment": "node"
   }
 }

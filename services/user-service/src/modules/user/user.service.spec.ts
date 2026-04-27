@@ -1,37 +1,37 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { UserService } from './user.service';
 import { User, UserStatus, UserType } from './entities/user.entity';
 import { UserSession } from './entities/user-session.entity';
 import { LanguagePreference, LanguageCode } from './entities/language-preference.entity';
-import { I18nService } from '../i18n/i18n.service';
+
+const makeMockUser = (): Partial<User> => ({
+  id: 'test-uuid-123',
+  telegramId: 123456789,
+  telegramUsername: 'testuser',
+  telegramFirstName: 'Test',
+  telegramLastName: 'User',
+  telegramLanguageCode: 'ru',
+  status: UserStatus.ACTIVE,
+  roles: [UserType.BUYER],
+  balance: 0,
+  reputationScore: 0,
+  completedDeals: 0,
+  cancelledDeals: 0,
+  disputedDeals: 0,
+  settings: {},
+  metadata: {},
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
 
 describe('UserService', () => {
   let service: UserService;
   let userRepository: Repository<User>;
   let sessionRepository: Repository<UserSession>;
   let languageRepository: Repository<LanguagePreference>;
-
-  const mockUser: Partial<User> = {
-    id: 'test-uuid-123',
-    telegramId: 123456789,
-    telegramUsername: 'testuser',
-    telegramFirstName: 'Test',
-    telegramLastName: 'User',
-    telegramLanguageCode: 'ru',
-    status: UserStatus.ACTIVE,
-    roles: [UserType.BUYER],
-    balance: 0,
-    reputationScore: 0,
-    completedDeals: 0,
-    cancelledDeals: 0,
-    disputedDeals: 0,
-    settings: {},
-    metadata: {},
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+  let mockUser: Partial<User>;
 
   const mockUserRepository = {
     create: jest.fn(),
@@ -56,6 +56,8 @@ describe('UserService', () => {
   };
 
   beforeEach(async () => {
+    mockUser = makeMockUser();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
@@ -130,7 +132,7 @@ describe('UserService', () => {
       const result = await service.findByTelegramId(123456789);
 
       expect(userRepository.findOne).toHaveBeenCalledWith({
-        where: { telegramId: 123456789, deletedAt: null },
+        where: { telegramId: 123456789, deletedAt: IsNull() },
         relations: ['languagePreferences'],
       });
       expect(result).toEqual(mockUser);
@@ -215,6 +217,7 @@ describe('UserService', () => {
         isActive: true,
         expiresAt: new Date(Date.now() + 1000000),
         revokedAt: null,
+        isValid: true,
         user: mockUser,
         updateActivity: jest.fn(),
       };
