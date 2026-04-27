@@ -25,6 +25,7 @@ import { ReviewModule } from './modules/review/review.module';
 import { ArbitrationModule } from './modules/arbitration/arbitration.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EscrowModule } from './modules/escrow/escrow.module';
+import { BlockchainModule } from './modules/blockchain/blockchain.module';
 import { AdminModule } from './modules/admin/admin.module';
 import {
   Dispute,
@@ -190,6 +191,7 @@ synchronize: true,
     ArbitrationModule,
     AuthModule,
     EscrowModule,
+    BlockchainModule,
     AdminModule,
     StoreModule,
     MonitoringModule,
