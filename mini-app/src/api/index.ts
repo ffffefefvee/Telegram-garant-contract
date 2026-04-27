@@ -1,14 +1,20 @@
 import axios, { AxiosInstance } from 'axios';
 import type {
+  AdminDashboardStats,
+  AdminDisputeStats,
   ArbitrationChatMessage,
+  ArbitratorPerformanceRow,
   ArbitratorProfile,
   ArbitratorStatistics,
+  ArbitratorStatus,
   AuthSession,
   Deal,
   Dispute,
+  DisputeStatus,
   Evidence,
   MakeDecisionInput,
   Message,
+  PaginatedList,
   Payment,
   User,
 } from '../types';
@@ -188,4 +194,40 @@ export const arbitrationApi = {
 
   getMyStatistics: () =>
     api.get<ArbitratorStatistics>('/arbitration/arbitrators/me/statistics'),
+};
+
+export const adminApi = {
+  getDashboard: () => api.get<AdminDashboardStats>('/admin/dashboard'),
+
+  getDisputeStats: () => api.get<AdminDisputeStats>('/admin/disputes/stats'),
+
+  getDisputes: (params?: { page?: number; limit?: number; status?: DisputeStatus }) =>
+    api.get<PaginatedList<Dispute>>('/admin/disputes', params as Record<string, unknown>),
+
+  reassignArbitrator: (disputeId: string, arbitratorId: string) =>
+    api.post<void>(`/admin/disputes/${disputeId}/reassign`, { arbitratorId }),
+
+  closeDispute: (disputeId: string, reason: string) =>
+    api.post<void>(`/admin/disputes/${disputeId}/close`, { reason }),
+
+  getArbitrators: (status?: ArbitratorStatus) =>
+    api.get<ArbitratorProfile[]>(
+      '/admin/arbitration/arbitrators',
+      status ? { status } : undefined,
+    ),
+
+  approveArbitrator: (userId: string) =>
+    api.post<void>(`/admin/arbitration/arbitrators/${userId}/approve`),
+
+  rejectArbitrator: (userId: string) =>
+    api.post<void>(`/admin/arbitration/arbitrators/${userId}/reject`),
+
+  suspendArbitrator: (userId: string, reason: string) =>
+    api.post<void>(`/admin/arbitration/arbitrators/${userId}/suspend`, { reason }),
+
+  reactivateArbitrator: (userId: string) =>
+    api.post<void>(`/admin/arbitration/arbitrators/${userId}/reactivate`),
+
+  getArbitratorsPerformance: () =>
+    api.get<ArbitratorPerformanceRow[]>('/admin/disputes/arbitrators/performance'),
 };
