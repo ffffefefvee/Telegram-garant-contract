@@ -41,6 +41,9 @@
 | D12 | UX-парадигма | **Button-driven**: все действия через inline-кнопки в боте и кнопки в Mini App. Текстовые команды — только `/start`, `/help`, `/support` как deep-link fallback. | Снижает порог входа, исключает ошибки ввода, нативно для Telegram. |
 | D13 | Дизайн-система | Единый UI Kit на основе Telegram-native palette + темизация под `Telegram.WebApp.themeParams` (auto dark/light). Skeleton loaders, плавные переходы, haptic feedback на всех мутирующих действиях, иконки на каждой кнопке. | Качество UI — приоритет, отдельный design pass в конце Горизонта 1. |
 | D14 | Админ-панели | **Две панели в MVP**: (a) Arbitrator panel — кабинет арбитра; (b) Admin panel — панель founder/саппорта. Обе — отдельные секции Mini App с auth по роли. | В Горизонте 1, не Phase 2. |
+| D15 | Оплата арбитра | **Штраф с виновной стороны = зарплата арбитра** (см. §6.5). Размер — 10% от суммы сделки, минимум 100 ₽, максимум 1000 ₽. Источник: эскроу-средства проигравшего. **Когда виновен продавец** — у него нет денег под нашим контролем; платформа доплачивает арбитру из своей комиссии (Treasury Reserve, 20% от каждой нормальной сделки). Невиновный **всегда** получает 100% ожидаемого. | Простая прозрачная связь «решение спора → деньги». Платформа несёт риск шортфолла, который покрывается резервом из обычных сделок. |
+| D16 | Залог арбитра | **200 USDT** при найме, on-chain в `ArbitratorRegistry.sol`. Сетка форфейтов 10/25/50/100% по тяжести проступка (см. §6.7). Изъятый залог → пострадавшей стороне или в Treasury Reserve. Senior-арбитры (>50 разрешённых споров без санкций) могут работать с пониженным залогом 100 USDT. | Skin in the game без агрессивного барьера на найм. |
+| D17 | Vacation & capacity | Арбитр сам управляет статусом: ACTIVE / VACATION / CAPACITY_LIMITED. Vacation — auto-resume по дате, нельзя если есть открытые споры (надо сдать head_arbitrator'у). Лимит отпуска — 30 дней / год. Capacity — max active disputes (по умолчанию 5). | Минимизирует burnout арбитров и даёт прозрачную загрузку. |
 
 ---
 
@@ -122,8 +125,8 @@
 |----------|-----------|--------------|
 | `EscrowImplementation.sol` | Логика одного эскроу (за которым клонится множество proxy) | Immutable, новая версия = новый адрес |
 | `EscrowFactory.sol` | Деплой клонов через `Clones.cloneDeterministic`, конфиг **тарифной сетки** (порог + ставки + флэт), регистр арбитров | Owner-controlled, через TimelockController |
-| `PlatformTreasury.sol` | Аккумулирует комиссии, multisig withdrawal | 2/3 multisig |
-| `ArbitratorRegistry.sol` | On-chain whitelist арбитров (для прозрачности и аудита) | Owner-controlled |
+| `PlatformTreasury.sol` | Аккумулирует комиссии и Treasury Reserve (20% отчислений), multisig withdrawal | 2/3 multisig |
+| `ArbitratorRegistry.sol` | On-chain реестр арбитров: stake, level, status, slashing (D16) | Owner-controlled через TimelockController |
 
 ### 4.2 Интерфейс EscrowImplementation
 
@@ -268,12 +271,102 @@ src/modules/
 
 На старте: head arbitrator (ты), 1-2 junior. По мере роста — найм.
 
-### 6.5 Экономика арбитра
+### 6.5 Экономика арбитра (D15)
 
-- Junior: $5 за разрешённый спор + бонус $5 если решение не оспорено через апелляцию.
-- Senior: $20 за разрешённый спор + $10 за апелляцию.
-- Источник: **отдельный budget из платформенной комиссии** (не из суммы сделки спорящих). Это защищает арбитра от "продажи" решения за процент.
-- Прозрачная отчётность арбитру в личном кабинете (LK для арбитров).
+**Штраф с виновной стороны = зарплата арбитра.** Прозрачная и простая связь: чьё решение принято — тот не платит штраф; чьё отклонено — платит.
+
+**Расчёт штрафа:**
+```
+fine = clamp(0.10 * deal_amount_usdt, min=100₽_eq, max=1000₽_eq)
+```
+В пересчёте на USDT по курсу момента funding. На MVP-минимуме 300 ₽ → 100 ₽ штраф (33% от сделки) — это плата за то, что человек втянул арбитра в мелкую сделку.
+
+**Распределение по исходу:**
+
+| Решение арбитра | Откуда штраф | Кому штраф |
+|---|---|---|
+| 100% покупателю (виновен продавец) | Treasury Reserve платформы | Арбитру |
+| 100% продавцу (виновен покупатель) | Из эскроу-доли покупателя | Арбитру |
+| Доли (например 70/30) | Пропорционально из доли каждой стороны (30% штрафа платит покупатель, 70% — Treasury за продавца) | Арбитру |
+
+**Treasury Reserve** — отдельный счёт платформы. Источник: 20% от каждой обычной (без споров) платформенной комиссии. Назначение: покрытие шортфолла, когда виновен продавец. По экспертной оценке индустрии: ~5-10% сделок идут в спор, из них ~40-60% решаются в пользу покупателя → резерв расходуется на ~3-6% сделок, при отчислении 20% это 4-7x запас прочности.
+
+**Бонусы и ранги** (поверх штрафа):
+
+| Ранг | Доступные споры | Бонус за «не оспорено в апелляции» |
+|---|---|---|
+| TRAINEE (первые 5 решений) | До $50 | 0% |
+| JUNIOR | До $500 | +50% к штрафу из Treasury Reserve |
+| SENIOR (>50 без санкций) | До $5000 + апелляции | +100% к штрафу |
+| HEAD_ARBITRATOR (founder) | Любые + misconduct | Не получает прямой штраф (его комп — фикс из Treasury) |
+
+**Защита от «продажи решения»:** так как штраф — прямой процент от сделки, теоретически арбитру выгоднее судить «в пользу той стороны, у которой больше денег вне платформы». Контрмеры:
+- Доли решений (50/50 / 70/30 / 30/70) — арбитр выбирает соотношение, не «победителя», что усложняет коррупцию.
+- Random round-robin назначение (нет права выбрать спор).
+- Публикация решений в анонимной прецедентной базе.
+- Апелляции с переворотом решения → форфейт залога (см. §6.7).
+- Ratio overturn-rate в KPI; >15% → автосуспенд + расследование.
+
+### 6.6 Залог арбитра и реестр (D16)
+
+**Реестр в `ArbitratorRegistry.sol`:**
+```solidity
+struct Arbitrator {
+    address wallet;             // payout address
+    bytes32 telegramIdHash;     // ссылка на TG-аккаунт (для backend join)
+    uint256 stake;              // текущий залог
+    uint256 totalResolved;      // счётчик
+    uint256 totalSlashed;       // суммарно изъято
+    Level level;                // TRAINEE | JUNIOR | SENIOR | HEAD
+    Status status;              // ACTIVE | VACATION | PROBATION | SUSPENDED | TERMINATED
+    uint64 hiredAt;
+    uint64 lastActivityAt;
+    uint64 vacationEndsAt;      // 0 если не в отпуске
+}
+```
+
+**Lifecycle:**
+- **Hire:** head_arbitrator (или admin) приглашает кандидата → invite-link. Кандидат вносит 200 USDT через Cryptomus или Web3 → status=TRAINEE.
+- **Promotion:** автоматически JUNIOR после 5 разрешённых споров без санкций; SENIOR после 50 без санкций (за последние 90 дней).
+- **Top-up:** если stake < 80% от минимума → status=SUSPENDED, автоматически назначения отключены до пополнения.
+- **Withdraw:** через `requestWithdraw()` + 14-дневный cooldown без открытых споров и санкций → multisig admin одобряет → on-chain transfer.
+
+### 6.7 Санкции и форфейт залога
+
+Каждое решение арбитра обжалуемо в течение 24 часов (см. §6.2). Если апелляционный арбитр **переворачивает** решение, оригинальный получает санкцию.
+
+| Проступок | Slash | Эффект на статус |
+|---|---|---|
+| 1-я отмена решения за 30 дней | -10% залога | Warning в audit log |
+| 2-я отмена за 30 дней | -25% залога | PROBATION 14 дней (только до $50) |
+| 3-я отмена за 90 дней | -50% залога | SUSPENDED 30 дней |
+| Конфликт интересов (доказан) | -100% залога | TERMINATED + публичная запись |
+| Пропуск SLA на разрешение | -5% залога (не накопительно за тот же спор) | — |
+| Молчание > 72ч на принятый спор | -10% залога + reassign | — |
+| Misconduct (сговор / коррупция / leak evidence) | -100% залога + бан | TERMINATED + публикация решения в прецедентной базе |
+
+**Куда идёт slashed stake:**
+- Если есть пострадавшая сторона (overturned решение, пострадавший пользователь) → 100% компенсация ему.
+- Иначе → Treasury Reserve.
+
+### 6.8 Vacation, capacity, conflict-of-interest (D17)
+
+**Vacation (отпуск):**
+- Арбитр в `/arbitrator/vacation` ставит даты начала/конца.
+- Нельзя уйти, пока есть открытые споры — система предлагает «сдать» их head_arbitrator'у (тот переназначит другому свободному).
+- Auto-return в ACTIVE по дате (или раньше — кнопка «Вернуться»).
+- Лимит: 30 дней / календарный год. Сверх лимита — head_arbitrator approval.
+- В отпуске — backend не назначает на новые споры.
+
+**Capacity (нагрузка):**
+- В `/arbitrator/capacity` арбитр ставит max active disputes (от 1 до 10, default 5).
+- Когда достигнут лимит, status=CAPACITY_LIMITED, новые споры идут другим.
+- Можно пометить специализацию (подкатегории сделок) — алгоритм назначения учитывает приоритетно.
+
+**Conflict-of-interest (анти-предвзятость):**
+- При назначении автоматический фильтр (см. §6.2.4): если потенциальный арбитр пересекался с любой стороной (по `userId`, IP, payout-address, telegram_id) за последние 90 дней — пропускаем.
+- Если он сам взял спор и обнаруживает CoI после открытия → кнопка «Decline + reason» в `/arbitrator/dispute/:id` без штрафа.
+- Если CoI вскроется позже расследованием → 100% slash залога + TERMINATED.
 
 ---
 
@@ -290,21 +383,60 @@ src/modules/
 - `/reviews` — отзывы по сделкам, оставленные/полученные.
 
 ### 7.2 Кабинет арбитра (`/arbitrator/*`) — только при роли `arbitrator`
-- `/arbitrator` — дашборд: активные споры (FIFO очередь), KPI (avg time, accept rate, success rate), ожидаемая выплата, статус «онлайн».
-- `/arbitrator/dispute/:id` — рабочее место по спору: chat snapshot, evidence от обеих сторон, кнопки «Запросить уточнение» / «Принять решение». Форма решения = два слайдера (buyer % / seller %), обязательное поле reasoning ≥ 100 символов.
-- `/arbitrator/history` — мои разрешённые споры + решения.
-- `/arbitrator/payouts` — баланс, история выплат, кнопка «Запросить выплату».
-- `/arbitrator/settings` — статус «в отпуске», уведомления, специализация.
+
+- `/arbitrator` — **дашборд**:
+  - Большой статус-toggle сверху: ACTIVE / VACATION / CAPACITY_LIMITED / PROBATION / SUSPENDED (последние два — read-only).
+  - Активные споры (FIFO с дедлайнами SLA), цветовая индикация (зелёный / жёлтый / красный).
+  - KPI за 30 дней: разрешено / в работе / overturn-rate / avg resolution time / accept rate.
+  - Заработано (всего / за 30 дней) + pending payout.
+  - Stake balance с предупреждением при < 100% (кнопка «Top up»).
+- `/arbitrator/dispute/:id` — **рабочее место**:
+  - Полный chat snapshot (read-only, с хэшем).
+  - Evidence от обеих сторон (структурированно по слотам).
+  - Кнопки «Запросить уточнение у buyer/seller» / «Decline (conflict of interest)».
+  - Форма решения: два слайдера (buyer % / seller %, сумма = 100), preset-кнопки [100/0, 70/30, 50/50, 30/70, 0/100], обязательный reasoning ≥ 100 символов.
+  - Pre-submit подтверждение: «Вы решаете 70/30. Это финально, обжалование 24ч. Подтвердить?».
+- `/arbitrator/history` — все мои разрешённые споры (поиск, фильтр по дате/исходу/был ли overturned).
+- `/arbitrator/payouts` — баланс, история выплат, кнопка «Withdraw to Web3 wallet» (только USDT).
+- `/arbitrator/stake` — текущий stake / минимум / форфейт-история (с linker'ами на споры). Кнопка «Top up» (через Cryptomus или прямой trans). Кнопка «Request withdraw» (только если ACTIVE, no open disputes, cooldown 14 дней).
+- `/arbitrator/vacation` — flow отпуска:
+  - Toggle «Уйти в отпуск» (disabled если есть открытые споры — показываем «Сначала разрешите N споров или передайте head_arbitrator'у»).
+  - Поля: дата начала (default = сейчас), дата возврата (mandatory).
+  - Counter «Использовано дней / 30 в этом году».
+- `/arbitrator/capacity` — capacity & specialization:
+  - Слайдер max active disputes (1-10).
+  - Чекбоксы специализации (5 подкатегорий digital goods).
+  - Toggle уведомлений (TG / off).
+- `/arbitrator/sanctions` — read-only список моих санкций (что произошло, когда, сколько slashed, ссылка на спор).
+- `/arbitrator/settings` — общие настройки профиля.
 
 ### 7.3 Админ-панель (`/admin/*`) — только при роли `admin` или `head_arbitrator`
-- `/admin` — overview: live-метрики (active deals, deals in funding, hot-wallet balance, reconciliation diff, arbitrator queue length, SLA breaches), алерты.
+
+- `/admin` — **overview**: live-метрики (active deals, deals in funding, hot-wallet balance, Treasury Reserve balance, reconciliation diff, arbitrator queue length, SLA breaches за 24ч), алерты с цветовыми бейджами.
 - `/admin/deals` — поиск/фильтр всех сделок, drill-down в любую, кнопка «Force resolve» (с обязательным reason и аудитом).
-- `/admin/users` — поиск пользователей, profile, история, кнопки «Suspend / Unban / Verify».
-- `/admin/arbitrators` — список арбитров, KPI, кнопки «Hire / Suspend / Promote / Fire». Просмотр misconduct-жалоб.
-- `/admin/moderation` — очередь жалоб (на сделку, на пользователя, на арбитра), кнопки решения.
-- `/admin/treasury` — состояние platform treasury, история выводов, лимиты multisig, history of fee accruals.
-- `/admin/disputes` — все споры (включая в работе), drill-down, override.
-- `/admin/settings` — feature flags, фи-конфиг, blocklist ключевых слов.
+- `/admin/users` — поиск пользователей, profile, история, кнопки «Suspend / Unban / Verify», просмотр linked accounts (для CoI-анализа).
+- `/admin/arbitrators` — **реестр арбитров**:
+  - Таблица: `username`, `level`, `status`, `stake_balance`, `active_disputes`, `total_resolved`, `accept_rate`, `overturn_rate`, `avg_resolution_h`, `last_active_at`.
+  - Фильтры по статусу и уровню.
+  - Действия: `Hire` (отправить invite-link), `Suspend`/`Unsuspend`, `Terminate` (с reason), `Promote`/`Demote`, `Adjust stake` (slash или refund вручную, с audit).
+- `/admin/arbitrators/:id` — **карточка арбитра**:
+  - KPI-блок (7 / 30 / 90 дней): принято / разрешено / overturn-rate / avg time / жалоб.
+  - История санкций (полная цепочка с reason, tx hashes).
+  - Stake-leger (deposits, slashes, withdraws).
+  - Все разрешённые споры с фильтром «Только overturned».
+  - Conflict-of-interest log: автоматические pre-flight проверки и совпадения с участниками сделок.
+- `/admin/disputes` — **глобальная очередь споров**:
+  - Все споры (открытые / в работе / appealed / resolved / closed).
+  - Фильтры по статусу, арбитру, длительности, стороне, сумме.
+  - Действия: `Reassign` (на другого арбитра, с reason, аудит), `Force escalate` (на head_arbitrator), `Override` (head_arbitrator only — назначить решение лично).
+- `/admin/moderation` — очередь жалоб (на сделку, на пользователя, на арбитра, abuse). Принять / отклонить / отложить.
+- `/admin/treasury` — **финансы**:
+  - Hot wallet balance / Reserve fund balance / Total slashed stakes (cumulative).
+  - Pending payouts (арбитрам, продавцам после released сделок).
+  - Учёт за период: `выплачено арбитрам / собрано штрафов / dotated from reserve / комиссия платформы / отчисление в Reserve`.
+  - Кнопка multisig-approve withdrawal (требует 2/3).
+- `/admin/audit` — лог всех админ-действий (Suspended, Terminated, Force-resolved, Stake adjusted, Override): кто, когда, кого, с каким reason. Read-only, immutable.
+- `/admin/settings` — feature flags, fee-config (тарифная сетка D5, штраф D15, минимум D6 — менять только через TimelockController), blocklist ключевых слов.
 
 ### 7.4 Общие требования к UI
 - **Все действия через кнопки.** Поля ввода только там, где нужны данные (цена, описание, payout-адрес, reasoning арбитра).
@@ -371,7 +503,15 @@ disputes (id, deal_id, opened_by, evidence_deadline, decision_deadline, status, 
 dispute_evidence (id, dispute_id, side, content, files[], hash, submitted_at)
 dispute_decisions (id, dispute_id, arbitrator_id, buyer_share_pct, seller_share_pct, reasoning, tx_hash)
 dispute_appeals (id, dispute_id, requested_by, original_decision_id, new_arbitrator_id, ...)
-arbitrators (id, user_id, level, status, total_resolved, avg_resolution_time_h, ...)
+arbitrators (id, user_id, level, status, stake_usdt, total_resolved, total_slashed_usdt,
+             overturn_rate, avg_resolution_time_h, vacation_ends_at, capacity_max, ...)
+arbitrator_stake_ledger (id, arbitrator_id, kind, amount, reason, dispute_id, tx_hash, created_at)
+   -- kind ∈ {DEPOSIT, SLASH, WITHDRAW, REFUND}
+arbitrator_sanctions (id, arbitrator_id, dispute_id, type, slash_pct, status_change, reason, created_at)
+arbitrator_payouts (id, arbitrator_id, dispute_id, amount_usdt, source, tx_hash, created_at)
+   -- source ∈ {GUILTY_BUYER, TREASURY_RESERVE}
+treasury_ledger (id, account, kind, amount, ref_id, tx_hash, created_at)
+   -- account ∈ {HOT_WALLET, RESERVE, MAIN}; kind ∈ {FEE_INCOME, RESERVE_DEPOSIT, ARB_PAYOUT, COMP_PAYOUT, WITHDRAW}
 reviews (id, deal_id, author_id, target_id, rating, comment, ...)
 reputation_scores (user_id, score, total_deals, completed_deals, disputed_deals, trust_level)
 moderation_reports (id, deal_id, reported_by, reason, status, ...)
