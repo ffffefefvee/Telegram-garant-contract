@@ -7,7 +7,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, In } from 'typeorm';
 import { ArbitratorProfile } from './entities/arbitrator-profile.entity';
-import { ArbitratorStatus, DisputeStatus } from './entities/enums/arbitration.enum';
+import {
+  ArbitratorAvailability,
+  ArbitratorStatus,
+  DisputeStatus,
+} from './entities/enums/arbitration.enum';
 import { Dispute } from './entities/dispute.entity';
 import { Deal } from '../deal/entities/deal.entity';
 
@@ -89,9 +93,13 @@ export class ArbitratorSelectionService {
     const baseWhere = excluded.length
       ? {
           status: ArbitratorStatus.ACTIVE,
+          availability: ArbitratorAvailability.AVAILABLE,
           userId: Not(In(excluded)),
         }
-      : { status: ArbitratorStatus.ACTIVE };
+      : {
+          status: ArbitratorStatus.ACTIVE,
+          availability: ArbitratorAvailability.AVAILABLE,
+        };
 
     const profiles = await this.profileRepo.find({
       where: baseWhere,

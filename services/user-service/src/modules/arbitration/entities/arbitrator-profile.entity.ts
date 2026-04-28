@@ -11,7 +11,7 @@ import {
   ManyToOne,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-import { ArbitratorStatus } from './enums/arbitration.enum';
+import { ArbitratorAvailability, ArbitratorStatus } from './enums/arbitration.enum';
 import { Dispute } from './dispute.entity';
 
 /**
@@ -39,6 +39,18 @@ export class ArbitratorProfile {
     default: ArbitratorStatus.PENDING,
   })
   status: ArbitratorStatus;
+
+  /**
+   * Self-managed work-state — orthogonal to {@link status}. ACTIVE
+   * arbitrators can flip themselves to AWAY to skip auto-assignment
+   * without admin intervention.
+   */
+  @Column({
+    type: 'enum',
+    enum: ArbitratorAvailability,
+    default: ArbitratorAvailability.AVAILABLE,
+  })
+  availability: ArbitratorAvailability;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   rating: number; // Средний рейтинг от сторон (0-5)
@@ -161,8 +173,12 @@ export class ArbitratorProfile {
     }
   }
 
+  get isAvailable(): boolean {
+    return this.availability === ArbitratorAvailability.AVAILABLE;
+  }
+
   get canAcceptCases(): boolean {
-    return this.isActive && !this.isSuspended;
+    return this.isActive && !this.isSuspended && this.isAvailable;
   }
 
   // Методы

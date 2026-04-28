@@ -3,7 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { ArbitratorProfile } from './entities/arbitrator-profile.entity';
 import { User } from '../user/entities/user.entity';
-import { ArbitratorStatus } from './entities/enums/arbitration.enum';
+import { ArbitratorAvailability, ArbitratorStatus } from './entities/enums/arbitration.enum';
+import { OutboxService } from '../ops/outbox.service';
 import { ArbitrationSettingsService } from './arbitration-settings.service';
 
 /**
@@ -17,6 +18,7 @@ export class ArbitratorService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly settingsService: ArbitrationSettingsService,
+    private readonly outbox: OutboxService,
   ) {}
 
   /**
@@ -293,6 +295,53 @@ export class ArbitratorService {
     profile.updatedAt = new Date();
 
     return this.profileRepository.save(profile);
+  }
+
+  /**
+   * Self-service переключение доступности арбитра (AVAILABLE ↔ AWAY).
+   *
+   * Не задевает admin-managed `status`. Меняется только если профиль
+   * утверждён (status === ACTIVE) — иначе бессмысленно: PENDING/SUSPENDED
+   * арбитров и так нельзя назначать.
+   *
+   * Эмитит outbox-событие `arbitrator.availability_changed` для будущих
+   * нотификаций (например, оповестить админа когда арбитр уходит «в
+   * отпуск» а в очереди есть споры).
+   */
+  async setAvailability(
+    arbitratorUserId: string,
+    availability: ArbitratorAvailability,
+  ): Promise<ArbitratorProfile> {
+    const profile = await this.getProfile(arbitratorUserId);
+
+    if (profile.status !== ArbitratorStatus.ACTIVE) {
+      throw new ForbiddenException(
+        'Only approved (ACTIVE) arbitrators can change availability',
+      );
+    }
+
+    if (profile.availability === availability) {
+      return profile;
+    }
+
+    const previous = profile.availability;
+    profile.availability = availability;
+    profile.updatedAt = new Date();
+
+    const saved = await this.profileRepository.save(profile);
+
+    await this.outbox.enqueue({
+      aggregateType: 'arbitrator',
+      aggregateId: profile.id,
+      eventType: 'arbitrator.availability_changed',
+      payload: {
+        arbitratorUserId,
+        previous,
+        next: availability,
+      },
+    });
+
+    return saved;
   }
 
   /**

@@ -54,6 +54,11 @@ class ApiClient {
     return response.data;
   }
 
+  async patch<T>(url: string, data?: unknown): Promise<T> {
+    const response = await this.client.patch<T>(url, data);
+    return response.data;
+  }
+
   async delete<T>(url: string): Promise<T> {
     const response = await this.client.delete<T>(url);
     return response.data;
@@ -149,4 +154,29 @@ export const usersApi = {
     api.post<User>('/users/me/wallet', { walletAddress }),
 
   detachWallet: () => api.delete<User>('/users/me/wallet'),
+};
+
+export type ArbitratorAvailability = 'available' | 'away';
+
+export interface ArbitratorProfileSummary {
+  id: string;
+  userId: string;
+  status: 'active' | 'pending' | 'suspended' | 'rejected';
+  availability: ArbitratorAvailability;
+  rating: number;
+  totalCases: number;
+  completedCases: number;
+}
+
+export const arbitrationApi = {
+  /** Self-service profile fetch (404 if user is not an arbitrator). */
+  getMyProfile: () =>
+    api.get<ArbitratorProfileSummary>('/arbitration/arbitrators/me'),
+
+  /** Flip work-state. Backend enforces status === ACTIVE. */
+  setMyAvailability: (availability: ArbitratorAvailability) =>
+    api.patch<ArbitratorProfileSummary>(
+      '/arbitration/arbitrators/me/availability',
+      { availability },
+    ),
 };

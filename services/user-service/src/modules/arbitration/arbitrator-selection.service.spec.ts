@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { ArbitratorSelectionService } from './arbitrator-selection.service';
 import { ArbitratorProfile } from './entities/arbitrator-profile.entity';
-import { ArbitratorStatus } from './entities/enums/arbitration.enum';
+import {
+  ArbitratorAvailability,
+  ArbitratorStatus,
+} from './entities/enums/arbitration.enum';
 import { Dispute } from './entities/dispute.entity';
 import { Deal } from '../deal/entities/deal.entity';
 
@@ -14,6 +17,7 @@ interface ProfileSeed {
   id: string;
   userId: string;
   status: ArbitratorStatus;
+  availability?: ArbitratorAvailability;
   rating: number;
   totalCases: number;
   user: { id: string; walletAddress: string | null } | null;
@@ -30,6 +34,10 @@ function makeProfileRepo(seed: ProfileSeed[]): any {
     find: jest.fn(async ({ where }: any) => {
       return seed.filter((p) => {
         if (where.status && p.status !== where.status) return false;
+        if (where.availability) {
+          const effective = p.availability ?? ArbitratorAvailability.AVAILABLE;
+          if (effective !== where.availability) return false;
+        }
         if (where.userId && (where.userId as any)._type === 'not') {
           // Trivial Not-In stub: real Not() carries wrapped value; we just ignore here
           return true;
@@ -206,5 +214,33 @@ describe('ArbitratorSelectionService', () => {
     const winner = await svc.selectForDeal('d1', { maxConcurrent: 5 });
     expect(winner.userId).toBe('arb1');
     await expect(svc.selectForDeal('d1', { maxConcurrent: 2 })).rejects.toThrow(/No eligible/);
+  });
+
+  it('skips arbitrators who flipped themselves to AWAY', async () => {
+    const svc = await buildService({
+      deal: { id: 'd1', buyerId: 'u1', sellerId: 'u2' },
+      profiles: [
+        {
+          id: 'p1',
+          userId: 'arb-away',
+          status: ArbitratorStatus.ACTIVE,
+          availability: ArbitratorAvailability.AWAY,
+          rating: 5,
+          totalCases: 10,
+          user: { id: 'arb-away', walletAddress: W('away') },
+        },
+        {
+          id: 'p2',
+          userId: 'arb-on',
+          status: ArbitratorStatus.ACTIVE,
+          availability: ArbitratorAvailability.AVAILABLE,
+          rating: 4,
+          totalCases: 5,
+          user: { id: 'arb-on', walletAddress: W('on') },
+        },
+      ],
+    });
+    const winner = await svc.selectForDeal('d1');
+    expect(winner.userId).toBe('arb-on');
   });
 });
