@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   Controller,
   Get,
+  Patch,
   Post,
   Put,
   Delete,
@@ -34,7 +36,11 @@ import {
   EnforceDecisionDto,
   AssignArbitratorDto,
 } from './dto';
-import { DisputeStatus, ArbitratorStatus } from './entities/enums/arbitration.enum';
+import {
+  ArbitratorAvailability,
+  ArbitratorStatus,
+  DisputeStatus,
+} from './entities/enums/arbitration.enum';
 
 /**
  * Контроллер для управления арбитражем
@@ -273,6 +279,26 @@ export class ArbitrationController {
   async getMyStatistics() {
     const user = (arguments[0] as any).user;
     return this.arbitratorService.getStatistics(user.id);
+  }
+
+  /**
+   * Self-service availability toggle for arbitrators.
+   * Only ACTIVE arbitrators may flip — service throws Forbidden otherwise.
+   */
+  @Patch('arbitrators/me/availability')
+  async setMyAvailability(
+    @Body() dto: { availability: ArbitratorAvailability },
+  ) {
+    const user = (arguments[0] as any).user;
+    if (
+      dto.availability !== ArbitratorAvailability.AVAILABLE &&
+      dto.availability !== ArbitratorAvailability.AWAY
+    ) {
+      throw new BadRequestException(
+        `availability must be one of: ${Object.values(ArbitratorAvailability).join(', ')}`,
+      );
+    }
+    return this.arbitratorService.setAvailability(user.id, dto.availability);
   }
 
   // === Settings (read-only for users) ===

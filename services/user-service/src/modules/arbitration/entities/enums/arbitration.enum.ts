@@ -137,6 +137,19 @@ export enum ArbitratorStatus {
 }
 
 /**
+ * Self-service work-state. Independent of {@link ArbitratorStatus} so an
+ * approved arbitrator can mark themselves AWAY without affecting their
+ * admin-managed lifecycle.
+ */
+export enum ArbitratorAvailability {
+  /** Принимает дела */
+  AVAILABLE = 'available',
+
+  /** В отъезде / занят */
+  AWAY = 'away',
+}
+
+/**
  * Типы событий в арбитраже
  */
 export enum ArbitrationEventType {
