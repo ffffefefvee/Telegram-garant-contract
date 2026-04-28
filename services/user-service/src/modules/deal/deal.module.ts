@@ -11,6 +11,7 @@ import { DealGateway } from './deal.gateway';
 import { DealGatewayService } from './deal-gateway.service';
 import { UserModule } from '../user/user.module';
 import { EscrowModule } from '../escrow/escrow.module';
+import { OpsModule } from '../ops/ops.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { EscrowModule } from '../escrow/escrow.module';
     ]),
     forwardRef(() => UserModule),
     EscrowModule,
+    OpsModule,
   ],
   controllers: [DealController],
   providers: [DealService, DealGateway, DealGatewayService],

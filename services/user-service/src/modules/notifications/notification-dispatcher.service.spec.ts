@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotificationDispatcher } from './notification-dispatcher.service';
 import { NotificationPreferenceService } from './notification-preference.service';
@@ -51,6 +52,7 @@ describe('NotificationDispatcher', () => {
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(NotificationPreference), useValue: prefRepo },
         { provide: TelegramBotService, useValue: bot },
+        { provide: ConfigService, useValue: { get: () => undefined } },
       ],
     }).compile();
 
@@ -188,5 +190,120 @@ describe('NotificationDispatcher', () => {
     const sellerCall = bot.sendMessage.mock.calls.find((c) => c[0] === 22);
     expect(buyerCall[1]).toContain('70');
     expect(sellerCall[1]).toContain('30');
+  });
+
+  it('delivers deal.created to seller', async () => {
+    userRepo.findOne.mockResolvedValue({
+      id: 'seller-1',
+      telegramId: 77,
+      telegramLanguageCode: 'en',
+    });
+    prefRepo.findOne.mockResolvedValue(null);
+
+    const result = await dispatcher.dispatch(
+      makeEvent('deal.created', {
+        sellerUserId: 'seller-1',
+        buyerUserId: 'buyer-1',
+        dealId: 'd-1',
+        dealTitle: 'New Project',
+        dealAmount: 500,
+      }),
+    );
+
+    expect(result.delivered).toBe(1);
+    expect(bot.sendMessage).toHaveBeenCalledWith(
+      77,
+      expect.stringContaining('new deal proposal'),
+      expect.objectContaining({ parseMode: 'HTML' }),
+    );
+  });
+
+  it('delivers deal.cancelled to counterparty', async () => {
+    userRepo.findOne.mockResolvedValue({
+      id: 'cp-1',
+      telegramId: 88,
+      telegramLanguageCode: 'es',
+    });
+    prefRepo.findOne.mockResolvedValue(null);
+
+    const result = await dispatcher.dispatch(
+      makeEvent('deal.cancelled', {
+        counterpartyUserId: 'cp-1',
+        dealId: 'd-1',
+        dealTitle: 'Project X',
+        reason: 'changed mind',
+      }),
+    );
+
+    expect(result.delivered).toBe(1);
+    expect(bot.sendMessage).toHaveBeenCalledWith(
+      88,
+      expect.stringContaining('Trato cancelado'),
+      expect.objectContaining({ parseMode: 'HTML' }),
+    );
+  });
+
+  it('delivers invite.accepted to buyer', async () => {
+    userRepo.findOne.mockResolvedValue({
+      id: 'buyer-1',
+      telegramId: 33,
+      telegramLanguageCode: 'ru',
+    });
+    prefRepo.findOne.mockResolvedValue(null);
+
+    const result = await dispatcher.dispatch(
+      makeEvent('invite.accepted', {
+        buyerUserId: 'buyer-1',
+        dealId: 'd-1',
+        dealTitle: 'Order #5',
+        dealAmount: 200,
+      }),
+    );
+
+    expect(result.delivered).toBe(1);
+    expect(bot.sendMessage).toHaveBeenCalledWith(
+      33,
+      expect.stringContaining('Контрагент принял приглашение'),
+      expect.objectContaining({ parseMode: 'HTML' }),
+    );
+  });
+});
+
+describe('buildDeeplinkBuilder', () => {
+  // Imported at top — but ts-jest doesn't auto-hoist; require here.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { buildDeeplinkBuilder } = require('./notification-dispatcher.service');
+
+  it('returns null when bot username/slug missing', () => {
+    const builder = buildDeeplinkBuilder({ get: () => undefined });
+    expect(builder.build('deal', 'd-1')).toBeNull();
+  });
+
+  it('builds a t.me/<bot>/<slug>?startapp=<path___id> link', () => {
+    const config = {
+      get: (key: string) =>
+        ({
+          TELEGRAM_BOT_USERNAME: 'garant_bot',
+          TELEGRAM_MINIAPP_SLUG: 'app',
+        })[key],
+    };
+    const builder = buildDeeplinkBuilder(config);
+    expect(builder.build('deal', 'abc-123')).toBe(
+      'https://t.me/garant_bot/app?startapp=deal___abc-123',
+    );
+  });
+
+  it('strips leading @ and replaces / in path', () => {
+    const config = {
+      get: (key: string) =>
+        ({
+          TELEGRAM_BOT_USERNAME: '@garant_bot',
+          TELEGRAM_MINIAPP_SLUG: 'app',
+        })[key],
+    };
+    const builder = buildDeeplinkBuilder(config);
+    expect(builder.build('arbitrator/dispute', 'd1')).toBe(
+      'https://t.me/garant_bot/app?startapp=arbitrator__dispute___d1',
+    );
   });
 });

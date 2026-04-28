@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user/entities/user.entity';
@@ -8,6 +9,7 @@ import { NotificationPreferenceService } from './notification-preference.service
 import {
   NotificationTemplateRegistry,
   registerBuiltinTemplates,
+  type DeeplinkBuilder,
   type Lang,
 } from './notification-template.registry';
 
@@ -34,6 +36,7 @@ export interface DispatchResult {
 @Injectable()
 export class NotificationDispatcher implements OnModuleInit {
   private readonly logger = new Logger(NotificationDispatcher.name);
+  private deeplink: DeeplinkBuilder = { build: () => null };
 
   constructor(
     @InjectRepository(User)
@@ -41,13 +44,20 @@ export class NotificationDispatcher implements OnModuleInit {
     private readonly registry: NotificationTemplateRegistry,
     private readonly preferences: NotificationPreferenceService,
     private readonly bot: TelegramBotService,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit(): void {
     registerBuiltinTemplates(this.registry);
+    this.deeplink = buildDeeplinkBuilder(this.config);
     this.logger.log(
       `Notification dispatcher ready. Event types: ${this.registry.listRegisteredEventTypes().join(', ') || '(none)'}`,
     );
+  }
+
+  /** Test seam — call from spec to skip onModuleInit's config dependency. */
+  initForTest(): void {
+    registerBuiltinTemplates(this.registry);
   }
 
   async dispatch(event: OutboxEvent): Promise<DispatchResult> {
@@ -94,6 +104,7 @@ export class NotificationDispatcher implements OnModuleInit {
         recipientUserId: userId,
         lang,
         payload: event.payload,
+        deeplink: this.deeplink,
       });
 
       try {
@@ -120,4 +131,34 @@ export class NotificationDispatcher implements OnModuleInit {
 function normalizeLang(code: string | null | undefined): Lang {
   if (code === 'en' || code === 'es') return code;
   return 'ru';
+}
+
+/**
+ * Builds Telegram MiniApp deeplinks of the form
+ * `https://t.me/<bot_username>/<miniapp_slug>?startapp=<path>__<id>`.
+ *
+ * Telegram's `startapp` parameter is alphanumeric + `_` + `-` only and
+ * <= 64 chars. We encode the route path by replacing `/` with `__` and
+ * append the id with `___`. The mini-app's bootstrap reads `startapp`
+ * from `WebApp.initDataUnsafe.start_param` and routes accordingly.
+ *
+ * Returns `null` if either env var is missing (CI/dev) — templates fall
+ * back to text-only messages.
+ */
+export function buildDeeplinkBuilder(config: ConfigService): DeeplinkBuilder {
+  const botUsername = config.get<string>('TELEGRAM_BOT_USERNAME');
+  const miniappSlug = config.get<string>('TELEGRAM_MINIAPP_SLUG');
+  if (!botUsername || !miniappSlug) {
+    return { build: () => null };
+  }
+  const cleanBot = botUsername.replace(/^@/, '');
+  return {
+    build: (path: string, id?: string) => {
+      const slug = `${path}${id ? `___${id}` : ''}`.replace(/\//g, '__');
+      // Telegram limits start_param to alphanumerics, underscores, dashes.
+      const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, '');
+      const truncated = safeSlug.slice(0, 64);
+      return `https://t.me/${cleanBot}/${miniappSlug}?startapp=${truncated}`;
+    },
+  };
 }

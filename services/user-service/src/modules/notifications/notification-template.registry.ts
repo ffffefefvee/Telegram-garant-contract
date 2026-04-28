@@ -6,22 +6,36 @@ import { Injectable } from '@nestjs/common';
  *   - a rendered message body (HTML, Telegram-parse-mode='HTML' safe).
  *
  * Keeping this as a registry (not inline in the dispatcher) makes it
- * trivial to add new notification types in later PRs — just register a
- * new builder and the worker picks it up.
+ * trivial to add new notification types — just register a new builder
+ * and the worker picks it up.
  */
 export type Lang = 'ru' | 'en' | 'es';
 
+export interface InlineKeyboardButton {
+  text: string;
+  url?: string;
+  callback_data?: string;
+}
+
+export interface InlineKeyboard {
+  inline_keyboard: InlineKeyboardButton[][];
+}
+
 export interface RenderedNotification {
   text: string;
-  keyboard?: {
-    inline_keyboard: Array<Array<{ text: string; url?: string; callback_data?: string }>>;
-  };
+  keyboard?: InlineKeyboard;
+}
+
+export interface DeeplinkBuilder {
+  /** Returns null if the bot/miniapp env isn't configured. */
+  build: (path: string, payload?: string) => string | null;
 }
 
 export interface RenderInput {
   recipientUserId: string;
   lang: Lang;
   payload: Record<string, unknown>;
+  deeplink: DeeplinkBuilder;
 }
 
 export type Renderer = (input: RenderInput) => RenderedNotification;
@@ -52,20 +66,18 @@ export class NotificationTemplateRegistry {
   }
 }
 
-// ─── Built-in templates for H2S1 PR 1/3 ──────────────────────
+// ─── Built-in templates ──────────────────────
 
 export function registerBuiltinTemplates(
   registry: NotificationTemplateRegistry,
 ): void {
+  // ─── Dispute lifecycle (H2S1 PR 1/3) ───
+
   registry.register({
     eventType: 'dispute.opened',
-    recipients: (p) => {
-      const out: string[] = [];
-      const opponentId = p.opponentUserId;
-      if (typeof opponentId === 'string') out.push(opponentId);
-      return out;
-    },
-    render: ({ lang, payload }) => ({
+    recipients: (p) =>
+      typeof p.opponentUserId === 'string' ? [p.opponentUserId] : [],
+    render: ({ lang, payload, deeplink }) => ({
       text: pickLang(
         {
           ru: `⚖️ <b>Против вас открыт спор</b>\nСделка: ${safe(payload.dealTitle)}\nПричина: ${safe(payload.reason)}\n\nОткройте приложение, чтобы ответить.`,
@@ -74,13 +86,21 @@ export function registerBuiltinTemplates(
         },
         lang,
       ),
+      keyboard: maybeKeyboard(
+        deeplink.build('dispute', stringField(payload, 'disputeId')),
+        pickLang(
+          { ru: 'Открыть спор', en: 'Open dispute', es: 'Abrir disputa' },
+          lang,
+        ),
+      ),
     }),
   });
 
   registry.register({
     eventType: 'dispute.arbitrator_assigned',
-    recipients: (p) => (typeof p.arbitratorUserId === 'string' ? [p.arbitratorUserId] : []),
-    render: ({ lang, payload }) => ({
+    recipients: (p) =>
+      typeof p.arbitratorUserId === 'string' ? [p.arbitratorUserId] : [],
+    render: ({ lang, payload, deeplink }) => ({
       text: pickLang(
         {
           ru: `🧑‍⚖️ <b>Вам назначен спор</b>\nСделка: ${safe(payload.dealTitle)}\nСумма: ${safe(payload.dealAmount)} USDT\nДедлайн: ${safe(payload.decisionDueAt)}`,
@@ -88,6 +108,13 @@ export function registerBuiltinTemplates(
           es: `🧑‍⚖️ <b>Se le ha asignado una disputa</b>\nTrato: ${safe(payload.dealTitle)}\nCantidad: ${safe(payload.dealAmount)} USDT\nFecha límite: ${safe(payload.decisionDueAt)}`,
         },
         lang,
+      ),
+      keyboard: maybeKeyboard(
+        deeplink.build('arbitrator/dispute', stringField(payload, 'disputeId')),
+        pickLang(
+          { ru: 'Открыть спор', en: 'Open dispute', es: 'Abrir disputa' },
+          lang,
+        ),
       ),
     }),
   });
@@ -100,7 +127,7 @@ export function registerBuiltinTemplates(
       if (typeof p.sellerUserId === 'string') ids.push(p.sellerUserId);
       return ids;
     },
-    render: ({ lang, payload, recipientUserId }) => {
+    render: ({ lang, payload, recipientUserId, deeplink }) => {
       const isBuyer = payload.buyerUserId === recipientUserId;
       const share = isBuyer ? payload.buyerShare : payload.sellerShare;
       return {
@@ -112,8 +139,132 @@ export function registerBuiltinTemplates(
           },
           lang,
         ),
+        keyboard: maybeKeyboard(
+          deeplink.build('dispute', stringField(payload, 'disputeId')),
+          pickLang(
+            { ru: 'Открыть спор', en: 'Open dispute', es: 'Abrir disputa' },
+            lang,
+          ),
+        ),
       };
     },
+  });
+
+  // ─── Deal lifecycle (H2S1 PR 2/3) ───
+
+  registry.register({
+    eventType: 'deal.created',
+    recipients: (p) =>
+      typeof p.sellerUserId === 'string' ? [p.sellerUserId] : [],
+    render: ({ lang, payload, deeplink }) => ({
+      text: pickLang(
+        {
+          ru: `🆕 <b>Вам предложена новая сделка</b>\nСделка: ${safe(payload.dealTitle)}\nСумма: ${safe(payload.dealAmount)}\n\nОткройте приложение, чтобы принять или отклонить.`,
+          en: `🆕 <b>You have a new deal proposal</b>\nDeal: ${safe(payload.dealTitle)}\nAmount: ${safe(payload.dealAmount)}\n\nOpen the app to accept or decline.`,
+          es: `🆕 <b>Tiene una nueva propuesta de trato</b>\nTrato: ${safe(payload.dealTitle)}\nCantidad: ${safe(payload.dealAmount)}\n\nAbra la aplicación para aceptar o rechazar.`,
+        },
+        lang,
+      ),
+      keyboard: maybeKeyboard(
+        deeplink.build('deal', stringField(payload, 'dealId')),
+        pickLang(
+          { ru: 'Открыть сделку', en: 'Open deal', es: 'Abrir trato' },
+          lang,
+        ),
+      ),
+    }),
+  });
+
+  registry.register({
+    eventType: 'deal.payment_received',
+    recipients: (p) =>
+      typeof p.sellerUserId === 'string' ? [p.sellerUserId] : [],
+    render: ({ lang, payload, deeplink }) => ({
+      text: pickLang(
+        {
+          ru: `💰 <b>Оплата получена</b>\nСделка: ${safe(payload.dealTitle)}\nСумма: ${safe(payload.dealAmount)}\n\nДеньги в эскроу — можно отгружать товар/услугу.`,
+          en: `💰 <b>Payment received</b>\nDeal: ${safe(payload.dealTitle)}\nAmount: ${safe(payload.dealAmount)}\n\nFunds are in escrow — you can ship the goods/service.`,
+          es: `💰 <b>Pago recibido</b>\nTrato: ${safe(payload.dealTitle)}\nCantidad: ${safe(payload.dealAmount)}\n\nLos fondos están en garantía — puede enviar.`,
+        },
+        lang,
+      ),
+      keyboard: maybeKeyboard(
+        deeplink.build('deal', stringField(payload, 'dealId')),
+        pickLang(
+          { ru: 'Открыть сделку', en: 'Open deal', es: 'Abrir trato' },
+          lang,
+        ),
+      ),
+    }),
+  });
+
+  registry.register({
+    eventType: 'deal.completed',
+    recipients: (p) =>
+      typeof p.sellerUserId === 'string' ? [p.sellerUserId] : [],
+    render: ({ lang, payload, deeplink }) => ({
+      text: pickLang(
+        {
+          ru: `✅ <b>Сделка завершена</b>\nСделка: ${safe(payload.dealTitle)}\nПокупатель подтвердил получение, средства вам выплачены.`,
+          en: `✅ <b>Deal completed</b>\nDeal: ${safe(payload.dealTitle)}\nBuyer confirmed receipt, funds have been released to you.`,
+          es: `✅ <b>Trato completado</b>\nTrato: ${safe(payload.dealTitle)}\nEl comprador confirmó la recepción, los fondos le han sido liberados.`,
+        },
+        lang,
+      ),
+      keyboard: maybeKeyboard(
+        deeplink.build('deal', stringField(payload, 'dealId')),
+        pickLang(
+          { ru: 'Открыть сделку', en: 'Open deal', es: 'Abrir trato' },
+          lang,
+        ),
+      ),
+    }),
+  });
+
+  registry.register({
+    eventType: 'deal.cancelled',
+    recipients: (p) =>
+      typeof p.counterpartyUserId === 'string' ? [p.counterpartyUserId] : [],
+    render: ({ lang, payload, deeplink }) => ({
+      text: pickLang(
+        {
+          ru: `❌ <b>Сделка отменена контрагентом</b>\nСделка: ${safe(payload.dealTitle)}\n${payload.reason ? `Причина: ${safe(payload.reason)}` : ''}`.trim(),
+          en: `❌ <b>Deal cancelled by counterparty</b>\nDeal: ${safe(payload.dealTitle)}\n${payload.reason ? `Reason: ${safe(payload.reason)}` : ''}`.trim(),
+          es: `❌ <b>Trato cancelado por la contraparte</b>\nTrato: ${safe(payload.dealTitle)}\n${payload.reason ? `Motivo: ${safe(payload.reason)}` : ''}`.trim(),
+        },
+        lang,
+      ),
+      keyboard: maybeKeyboard(
+        deeplink.build('deal', stringField(payload, 'dealId')),
+        pickLang(
+          { ru: 'Открыть сделку', en: 'Open deal', es: 'Abrir trato' },
+          lang,
+        ),
+      ),
+    }),
+  });
+
+  registry.register({
+    eventType: 'invite.accepted',
+    recipients: (p) =>
+      typeof p.buyerUserId === 'string' ? [p.buyerUserId] : [],
+    render: ({ lang, payload, deeplink }) => ({
+      text: pickLang(
+        {
+          ru: `🤝 <b>Контрагент принял приглашение</b>\nСделка: ${safe(payload.dealTitle)}\nСумма: ${safe(payload.dealAmount)}\n\nМожно оплатить — деньги уйдут в эскроу.`,
+          en: `🤝 <b>Counterparty accepted your invite</b>\nDeal: ${safe(payload.dealTitle)}\nAmount: ${safe(payload.dealAmount)}\n\nYou can now pay — funds will go to escrow.`,
+          es: `🤝 <b>La contraparte aceptó su invitación</b>\nTrato: ${safe(payload.dealTitle)}\nCantidad: ${safe(payload.dealAmount)}\n\nAhora puede pagar — los fondos irán a la garantía.`,
+        },
+        lang,
+      ),
+      keyboard: maybeKeyboard(
+        deeplink.build('deal', stringField(payload, 'dealId')),
+        pickLang(
+          { ru: 'Открыть сделку', en: 'Open deal', es: 'Abrir trato' },
+          lang,
+        ),
+      ),
+    }),
   });
 }
 
@@ -128,4 +279,20 @@ function safe(v: unknown): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function stringField(
+  payload: Record<string, unknown>,
+  field: string,
+): string | undefined {
+  const v = payload[field];
+  return typeof v === 'string' ? v : undefined;
+}
+
+function maybeKeyboard(
+  url: string | null,
+  buttonText: string,
+): InlineKeyboard | undefined {
+  if (!url) return undefined;
+  return { inline_keyboard: [[{ text: buttonText, url }]] };
 }
