@@ -25,6 +25,7 @@ import { DealStateMachine } from './fsm/deal-state-machine';
 import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 import { EscrowService } from '../escrow/escrow.service';
+import { OutboxService } from '../ops/outbox.service';
 
 export interface CreateDealDto {
   type: DealType;
@@ -95,6 +96,7 @@ export class DealService {
     private eventRepository: Repository<DealEvent>,
     private userService: UserService,
     private escrowService: EscrowService,
+    private outbox: OutboxService,
   ) {
     this.stateMachine = new DealStateMachine({
       commissionRate: 0.05, // 5% комиссия
@@ -173,6 +175,22 @@ export class DealService {
       userId: buyer.id,
       description: `Сделка ${dealNumber} создана`,
     });
+
+    // Нотификация продавцу, если он уже известен
+    if (seller) {
+      await this.outbox.enqueue({
+        aggregateType: 'deal',
+        aggregateId: savedDeal.id,
+        eventType: 'deal.created',
+        payload: {
+          dealId: savedDeal.id,
+          dealTitle: savedDeal.title ?? `Deal ${dealNumber}`,
+          dealAmount: Number(savedDeal.amount),
+          sellerUserId: seller.id,
+          buyerUserId: buyer.id,
+        },
+      });
+    }
 
     this.logger.log(`Deal created: ${savedDeal.id}, number: ${dealNumber}`);
 
@@ -335,7 +353,27 @@ export class DealService {
     cancelledDeal.cancelReason = reason || null;
     cancelledDeal.cancelledAt = new Date();
 
-    return this.dealRepository.save(cancelledDeal);
+    const saved = await this.dealRepository.save(cancelledDeal);
+
+    // Нотификация контрагенту (не тому, кто отменил)
+    const counterpartyId =
+      deal.buyerId === userId ? deal.sellerId : deal.buyerId;
+    if (counterpartyId) {
+      await this.outbox.enqueue({
+        aggregateType: 'deal',
+        aggregateId: deal.id,
+        eventType: 'deal.cancelled',
+        payload: {
+          dealId: deal.id,
+          dealTitle: deal.title ?? `Deal ${deal.id}`,
+          counterpartyUserId: counterpartyId,
+          cancelledByUserId: userId,
+          reason: reason ?? null,
+        },
+      });
+    }
+
+    return saved;
   }
 
   /**
@@ -400,7 +438,25 @@ export class DealService {
       DealEvent.createPaymentReceived(deal.id, amount, currency),
     );
 
-    return this.dealRepository.save(deal);
+    const saved = await this.dealRepository.save(deal);
+
+    // Нотификация продавцу — деньги в эскроу, можно отгружать
+    if (deal.sellerId) {
+      await this.outbox.enqueue({
+        aggregateType: 'deal',
+        aggregateId: deal.id,
+        eventType: 'deal.payment_received',
+        payload: {
+          dealId: deal.id,
+          dealTitle: deal.title ?? `Deal ${deal.id}`,
+          dealAmount: Number(amount),
+          sellerUserId: deal.sellerId,
+          buyerUserId: deal.buyerId,
+        },
+      });
+    }
+
+    return saved;
   }
 
   /**
@@ -425,7 +481,25 @@ export class DealService {
       await this.userService.incrementDealStats(deal.sellerId, 'completed');
     }
 
-    return this.dealRepository.save(deal);
+    const saved = await this.dealRepository.save(deal);
+
+    // Нотификация продавцу — деньги выпущены
+    if (deal.sellerId) {
+      await this.outbox.enqueue({
+        aggregateType: 'deal',
+        aggregateId: deal.id,
+        eventType: 'deal.completed',
+        payload: {
+          dealId: deal.id,
+          dealTitle: deal.title ?? `Deal ${deal.id}`,
+          dealAmount: Number(deal.amount),
+          sellerUserId: deal.sellerId,
+          buyerUserId: deal.buyerId,
+        },
+      });
+    }
+
+    return saved;
   }
 
   /**
@@ -612,6 +686,22 @@ export class DealService {
     await this.createEvent(
       DealEvent.createCounterpartyAccepted(invite.dealId, userId),
     );
+
+    // Нотификация покупателю — контрагент принял приглашение
+    if (deal.buyerId) {
+      await this.outbox.enqueue({
+        aggregateType: 'deal',
+        aggregateId: deal.id,
+        eventType: 'invite.accepted',
+        payload: {
+          dealId: deal.id,
+          dealTitle: deal.title ?? `Deal ${deal.id}`,
+          dealAmount: Number(deal.amount),
+          buyerUserId: deal.buyerId,
+          sellerUserId: userId,
+        },
+      });
+    }
 
     return savedInvite;
   }
