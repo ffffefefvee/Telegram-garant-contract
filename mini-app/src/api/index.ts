@@ -180,3 +180,54 @@ export const arbitrationApi = {
       { availability },
     ),
 };
+
+export interface TreasurySummary {
+  ready: boolean;
+  treasuryAddress: string;
+  tokenAddress: string;
+  decimals: number;
+  /** Decimal string of token base units. */
+  main: string;
+  reserve: string;
+  rawTokenBalance: string;
+  untracked: string;
+  reserveBps: number;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorId: string | null;
+  actorRole: string | null;
+  aggregateType: string;
+  aggregateId: string;
+  action: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface AuditLogPage {
+  items: AuditLogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface AuditLogQuery {
+  page?: number;
+  limit?: number;
+  action?: string;
+  aggregateType?: string;
+  aggregateId?: string;
+  actorId?: string;
+  from?: string;
+  to?: string;
+}
+
+export const adminApi = {
+  /** On-chain treasury balances + token info. Read-only. */
+  getTreasurySummary: () => api.get<TreasurySummary>('/admin/treasury/summary'),
+
+  /** Paginated audit log; combine filters with AND. */
+  getAuditLog: (query: AuditLogQuery = {}) =>
+    api.get<AuditLogPage>('/admin/audit-log', query as Record<string, unknown>),
+};

@@ -5,6 +5,7 @@ import { AdminProfile } from './entities/admin-profile.entity';
 import { AdminLog } from './entities/admin-log.entity';
 import { User } from '../user/entities/user.entity';
 import { Role } from './enums/role.enum';
+import { AuditLogService } from '../ops/audit-log.service';
 
 @Injectable()
 export class AdminService {
@@ -17,6 +18,7 @@ export class AdminService {
     private adminLogRepo: Repository<AdminLog>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   /**
@@ -85,6 +87,24 @@ export class AdminService {
       ipAddress: data.ipAddress,
     });
 
-    return this.adminLogRepo.save(log);
+    const saved = await this.adminLogRepo.save(log);
+
+    // Bridge into the unified audit_log table so the admin viewer sees
+    // every admin action in one place. Failures are swallowed inside
+    // AuditLogService — they never propagate.
+    await this.auditLog.write({
+      actorId: data.adminId ?? null,
+      actorRole: 'admin',
+      aggregateType: 'admin_action',
+      aggregateId: data.targetId ?? data.adminId ?? 'unknown',
+      action: data.action,
+      details: {
+        description: data.description,
+        ipAddress: data.ipAddress,
+        ...(data.details ?? {}),
+      },
+    });
+
+    return saved;
   }
 }

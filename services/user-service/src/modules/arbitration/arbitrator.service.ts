@@ -5,6 +5,7 @@ import { ArbitratorProfile } from './entities/arbitrator-profile.entity';
 import { User } from '../user/entities/user.entity';
 import { ArbitratorAvailability, ArbitratorStatus } from './entities/enums/arbitration.enum';
 import { OutboxService } from '../ops/outbox.service';
+import { AuditLogService } from '../ops/audit-log.service';
 import { ArbitrationSettingsService } from './arbitration-settings.service';
 
 /**
@@ -19,6 +20,7 @@ export class ArbitratorService {
     private readonly userRepository: Repository<User>,
     private readonly settingsService: ArbitrationSettingsService,
     private readonly outbox: OutboxService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   /**
@@ -165,7 +167,16 @@ export class ArbitratorService {
     profile.approvedById = adminId;
     profile.updatedAt = new Date();
 
-    return this.profileRepository.save(profile);
+    const saved = await this.profileRepository.save(profile);
+    await this.auditLog.write({
+      actorId: adminId,
+      actorRole: 'admin',
+      aggregateType: 'arbitrator',
+      aggregateId: profile.id,
+      action: 'arbitrator.approved',
+      details: { arbitratorUserId, depositAmount: depositAmount.toString() },
+    });
+    return saved;
   }
 
   /**
@@ -181,7 +192,16 @@ export class ArbitratorService {
     profile.reject();
     profile.updatedAt = new Date();
 
-    return this.profileRepository.save(profile);
+    const saved = await this.profileRepository.save(profile);
+    await this.auditLog.write({
+      actorId: adminId,
+      actorRole: 'admin',
+      aggregateType: 'arbitrator',
+      aggregateId: profile.id,
+      action: 'arbitrator.rejected',
+      details: { arbitratorUserId },
+    });
+    return saved;
   }
 
   /**
@@ -201,7 +221,16 @@ export class ArbitratorService {
     profile.suspend(reason, adminId);
     profile.updatedAt = new Date();
 
-    return this.profileRepository.save(profile);
+    const saved = await this.profileRepository.save(profile);
+    await this.auditLog.write({
+      actorId: adminId,
+      actorRole: 'admin',
+      aggregateType: 'arbitrator',
+      aggregateId: profile.id,
+      action: 'arbitrator.suspended',
+      details: { arbitratorUserId, reason },
+    });
+    return saved;
   }
 
   /**
@@ -217,7 +246,16 @@ export class ArbitratorService {
     profile.reactivate();
     profile.updatedAt = new Date();
 
-    return this.profileRepository.save(profile);
+    const saved = await this.profileRepository.save(profile);
+    await this.auditLog.write({
+      actorId: adminId,
+      actorRole: 'admin',
+      aggregateType: 'arbitrator',
+      aggregateId: profile.id,
+      action: 'arbitrator.reactivated',
+      details: { arbitratorUserId },
+    });
+    return saved;
   }
 
   /**

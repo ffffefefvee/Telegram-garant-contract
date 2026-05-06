@@ -6,6 +6,7 @@ import { ArbitratorProfile } from './entities/arbitrator-profile.entity';
 import { User } from '../user/entities/user.entity';
 import { ArbitrationSettingsService } from './arbitration-settings.service';
 import { OutboxService } from '../ops/outbox.service';
+import { AuditLogService } from '../ops/audit-log.service';
 import {
   ArbitratorAvailability,
   ArbitratorStatus,
@@ -61,6 +62,7 @@ describe('ArbitratorService.setAvailability', () => {
         { provide: getRepositoryToken(User), useValue: {} },
         { provide: ArbitrationSettingsService, useValue: {} },
         { provide: OutboxService, useValue: outbox },
+        { provide: AuditLogService, useValue: { write: jest.fn(async () => null) } },
       ],
     }).compile();
 
