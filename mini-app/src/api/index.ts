@@ -223,6 +223,52 @@ export interface AuditLogQuery {
   to?: string;
 }
 
+/**
+ * Backend-known notification event types. Keep in sync with
+ * `notification-template.registry.ts` on the user-service. Mini-app
+ * only needs this list for the per-event mute UI; unknown values are
+ * tolerated (server is the source of truth).
+ */
+export const NOTIFICATION_EVENT_TYPES = [
+  'deal.created',
+  'deal.payment_received',
+  'deal.completed',
+  'deal.cancelled',
+  'invite.accepted',
+  'dispute.opened',
+  'dispute.arbitrator_assigned',
+  'dispute.decision_made',
+] as const;
+
+export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
+
+export interface NotificationPreferences {
+  id?: string;
+  userId: string;
+  mutedAll: boolean;
+  mutedEventTypes: string[];
+  /** "HH:MM" UTC, or null when disabled. */
+  quietHoursStart: string | null;
+  quietHoursEnd: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateNotificationPreferencesInput {
+  mutedAll?: boolean;
+  mutedEventTypes?: string[];
+  quietHoursStart?: string | null;
+  quietHoursEnd?: string | null;
+}
+
+export const notificationsApi = {
+  getPreferences: () =>
+    api.get<NotificationPreferences>('/notifications/preferences'),
+
+  updatePreferences: (input: UpdateNotificationPreferencesInput) =>
+    api.patch<NotificationPreferences>('/notifications/preferences', input),
+};
+
 export const adminApi = {
   /** On-chain treasury balances + token info. Read-only. */
   getTreasurySummary: () => api.get<TreasurySummary>('/admin/treasury/summary'),

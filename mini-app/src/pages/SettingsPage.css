@@ -1,0 +1,162 @@
+.settings-page {
+  padding: 16px;
+  padding-bottom: 100px;
+  min-height: 100vh;
+}
+
+.settings-back {
+  background: none;
+  border: none;
+  color: var(--tg-theme-link-color, #2481cc);
+  font-size: 15px;
+  padding: 4px 0;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.settings-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--tg-theme-text-color, #000);
+  margin: 0 0 8px;
+}
+
+.settings-subtitle {
+  font-size: 13px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+  margin: 0 0 24px;
+  line-height: 1.4;
+}
+
+.settings-section {
+  background: var(--tg-theme-secondary-bg-color, #f4f4f5);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.settings-section--disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.settings-section__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tg-theme-text-color, #000);
+  margin: 0 0 4px;
+}
+
+.settings-section__hint {
+  font-size: 12px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--tg-theme-bg-color, #fff);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tg-theme-text-color, #000);
+}
+
+.settings-row__hint {
+  font-size: 12px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+  margin-top: 2px;
+}
+
+.settings-row__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.settings-row--toggle input[type='checkbox'] {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  accent-color: var(--tg-theme-button-color, #2481cc);
+}
+
+.settings-quiet {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.settings-quiet__field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-quiet__field span {
+  font-size: 12px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+}
+
+.settings-quiet__field input[type='time'] {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--tg-theme-bg-color, #fff);
+  background: var(--tg-theme-bg-color, #fff);
+  color: var(--tg-theme-text-color, #000);
+  font-size: 15px;
+}
+
+.settings-error {
+  margin: 16px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.settings-actions {
+  position: sticky;
+  bottom: 16px;
+  display: flex;
+  justify-content: stretch;
+}
+
+.settings-save {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: var(--tg-theme-button-color, #2481cc);
+  color: var(--tg-theme-button-text-color, #fff);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.settings-save:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.settings-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--tg-theme-hint-color, #8e8e93);
+}
