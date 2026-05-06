@@ -4,6 +4,7 @@ import { useTelegramWebApp } from './hooks/useTelegramWebApp';
 import { DealsPage } from './pages/DealsPage';
 import { DealChatPage } from './pages/DealChatPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { SettingsPage } from './pages/SettingsPage';
 import { ArbitratorPage } from './pages/ArbitratorPage';
 import { AdminPage } from './pages/AdminPage';
 import { BottomNav } from './components/BottomNav';
@@ -57,6 +58,7 @@ const App: React.FC = () => {
             <Route path="/deals" element={<DealsPage />} />
             <Route path="/deals/:id" element={<DealChatPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route
               path="/arbitrator/*"
               element={
