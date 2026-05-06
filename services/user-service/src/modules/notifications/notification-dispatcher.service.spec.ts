@@ -243,6 +243,129 @@ describe('NotificationDispatcher', () => {
     );
   });
 
+  describe('quiet hours', () => {
+    // Freeze "now" at 23:30 UTC so a 22:00–08:00 window is active.
+    beforeAll(() => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+      jest.setSystemTime(new Date('2026-01-01T23:30:00.000Z'));
+    });
+
+    afterAll(() => {
+      jest.useRealTimers();
+    });
+
+    it('defers a non-critical event when recipient is in quiet hours', async () => {
+      userRepo.findOne.mockResolvedValue({
+        id: 'seller-1',
+        telegramId: 77,
+        telegramLanguageCode: 'ru',
+      });
+      prefRepo.findOne.mockResolvedValue({
+        id: 'pref-1',
+        userId: 'seller-1',
+        mutedAll: false,
+        mutedEventTypes: [],
+        // 22:00 → 08:00 spans midnight; 23:30 is inside the window.
+        quietHoursStart: '22:00',
+        quietHoursEnd: '08:00',
+      });
+
+      const result = await dispatcher.dispatch(
+        makeEvent('deal.created', {
+          sellerUserId: 'seller-1',
+          buyerUserId: 'buyer-1',
+          dealId: 'd-1',
+          dealTitle: 'After-hours order',
+          dealAmount: 100,
+        }),
+      );
+
+      expect(result.delivered).toBe(0);
+      expect(result.deferredMs).not.toBeNull();
+      expect(result.deferredMs!).toBeGreaterThan(0);
+      expect(bot.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('bypasses quiet hours for critical dispute.* events', async () => {
+      userRepo.findOne.mockResolvedValue({
+        id: 'user-opp',
+        telegramId: 42,
+        telegramLanguageCode: 'ru',
+      });
+      prefRepo.findOne.mockResolvedValue({
+        id: 'pref-2',
+        userId: 'user-opp',
+        mutedAll: false,
+        mutedEventTypes: [],
+        quietHoursStart: '22:00',
+        quietHoursEnd: '08:00',
+      });
+
+      const result = await dispatcher.dispatch(
+        makeEvent('dispute.opened', {
+          opponentUserId: 'user-opp',
+          dealTitle: 'Urgent',
+          reason: 'late',
+        }),
+      );
+
+      expect(result.delivered).toBe(1);
+      expect(result.deferredMs).toBeNull();
+      expect(bot.sendMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not partially deliver: 2 recipients where 1 is in quiet hours defers both', async () => {
+      userRepo.findOne
+        .mockResolvedValueOnce({
+          id: 'user-buyer',
+          telegramId: 11,
+          telegramLanguageCode: 'ru',
+        })
+        .mockResolvedValueOnce({
+          id: 'user-seller',
+          telegramId: 22,
+          telegramLanguageCode: 'ru',
+        });
+      // Buyer has quiet hours active; seller does not.
+      prefRepo.findOne
+        .mockResolvedValueOnce({
+          id: 'pref-buyer',
+          userId: 'user-buyer',
+          mutedAll: false,
+          mutedEventTypes: [],
+          quietHoursStart: '22:00',
+          quietHoursEnd: '08:00',
+        })
+        .mockResolvedValueOnce(null);
+
+      // Use a non-critical 2-recipient template by registering a custom one.
+      const registry = (
+        dispatcher as unknown as { registry: NotificationTemplateRegistry }
+      ).registry;
+      registry.register({
+        eventType: 'test.both_parties',
+        recipients: (p) => {
+          const ids: string[] = [];
+          if (typeof p.buyerUserId === 'string') ids.push(p.buyerUserId);
+          if (typeof p.sellerUserId === 'string') ids.push(p.sellerUserId);
+          return ids;
+        },
+        render: () => ({ text: 'hello' }),
+      });
+
+      const result = await dispatcher.dispatch(
+        makeEvent('test.both_parties', {
+          buyerUserId: 'user-buyer',
+          sellerUserId: 'user-seller',
+        }),
+      );
+
+      expect(result.delivered).toBe(0);
+      expect(result.deferredMs).not.toBeNull();
+      expect(bot.sendMessage).not.toHaveBeenCalled();
+    });
+  });
+
   it('delivers invite.accepted to buyer', async () => {
     userRepo.findOne.mockResolvedValue({
       id: 'buyer-1',

@@ -71,44 +71,87 @@ export class NotificationDispatcher implements OnModuleInit {
       return { delivered: 0, skipped: 0, deferredMs: null, unhandled: false };
     }
 
-    let delivered = 0;
-    let skipped = 0;
-    let deferDeltaMs: number | null = null;
-
+    // Resolve each recipient (user row + preferences). We do this in a
+    // pre-pass so we can decide whether to defer the WHOLE row before
+    // sending anything — if we sent to half the recipients and then
+    // deferred for the other half, the early ones would receive
+    // duplicates on the next tick.
+    type Resolved = {
+      userId: string;
+      user: User;
+      pref: Awaited<ReturnType<NotificationPreferenceService['getOrDefault']>>;
+      muted: boolean;
+      delayMs: number;
+    };
+    const resolved: Resolved[] = [];
     for (const userId of recipientIds) {
       const user = await this.userRepo.findOne({ where: { id: userId } });
       if (!user || !user.telegramId) {
         this.logger.warn(
           `Skip ${event.eventType}/${userId}: user missing or no telegramId`,
         );
-        skipped += 1;
         continue;
       }
-
       const pref = await this.preferences.getOrDefault(userId);
-      if (this.preferences.isMuted(pref, event.eventType)) {
+      const muted = this.preferences.isMuted(pref, event.eventType);
+      const delayMs = template.critical
+        ? 0
+        : this.preferences.quietHoursDelayMs(pref);
+      resolved.push({ userId, user, pref, muted, delayMs });
+    }
+
+    // No reachable recipients at all (everyone missing telegramId): treat
+    // as a non-deferrable miss so the worker can mark delivered and stop
+    // re-firing.
+    if (resolved.length === 0) {
+      return {
+        delivered: 0,
+        skipped: recipientIds.length,
+        deferredMs: null,
+        unhandled: false,
+      };
+    }
+
+    // If ANY non-muted recipient is currently inside their quiet-hours
+    // window, defer the whole row to the latest end-of-window across
+    // recipients. Muted recipients don't extend the defer because they
+    // would never be delivered anyway.
+    const deferCandidates = resolved.filter((r) => !r.muted && r.delayMs > 0);
+    if (deferCandidates.length > 0) {
+      const maxDelay = deferCandidates.reduce(
+        (acc, r) => Math.max(acc, r.delayMs),
+        0,
+      );
+      return {
+        delivered: 0,
+        // Skipped here means "not delivered now"; the worker will re-pick
+        // the row after the defer window. We still report skipped so logs
+        // make it obvious the tick wasn't a no-op.
+        skipped: resolved.length,
+        deferredMs: maxDelay,
+        unhandled: false,
+      };
+    }
+
+    let delivered = 0;
+    let skipped = recipientIds.length - resolved.length;
+
+    for (const r of resolved) {
+      if (r.muted) {
         skipped += 1;
         continue;
       }
 
-      const delay = this.preferences.quietHoursDelayMs(pref);
-      if (delay > 0) {
-        deferDeltaMs =
-          deferDeltaMs === null ? delay : Math.max(deferDeltaMs, delay);
-        skipped += 1;
-        continue;
-      }
-
-      const lang = normalizeLang(user.telegramLanguageCode);
+      const lang = normalizeLang(r.user.telegramLanguageCode);
       const rendered = template.render({
-        recipientUserId: userId,
+        recipientUserId: r.userId,
         lang,
         payload: event.payload,
         deeplink: this.deeplink,
       });
 
       try {
-        await this.bot.sendMessage(user.telegramId, rendered.text, {
+        await this.bot.sendMessage(r.user.telegramId!, rendered.text, {
           parseMode: 'HTML',
           replyMarkup: rendered.keyboard,
         });
@@ -122,7 +165,7 @@ export class NotificationDispatcher implements OnModuleInit {
     return {
       delivered,
       skipped,
-      deferredMs: deferDeltaMs,
+      deferredMs: null,
       unhandled: false,
     };
   }

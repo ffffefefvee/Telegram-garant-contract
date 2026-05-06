@@ -47,6 +47,18 @@ export interface NotificationTemplate {
   recipients: (payload: Record<string, unknown>) => string[];
   /** Renders the message body per recipient + language. */
   render: Renderer;
+  /**
+   * Critical events bypass the recipient's quiet-hours window — they
+   * are delivered immediately even if `now()` falls inside the user's
+   * configured quiet hours. Per-event mutes (`mutedEventTypes`) and
+   * `mutedAll` still apply: a user who explicitly muted a critical
+   * type is still skipped.
+   *
+   * Currently true for `dispute.*` events because dispute SLAs are
+   * tight and a deferred dispute notification can cost the user the
+   * window in which they could have responded.
+   */
+  critical?: boolean;
 }
 
 @Injectable()
@@ -75,6 +87,7 @@ export function registerBuiltinTemplates(
 
   registry.register({
     eventType: 'dispute.opened',
+    critical: true,
     recipients: (p) =>
       typeof p.opponentUserId === 'string' ? [p.opponentUserId] : [],
     render: ({ lang, payload, deeplink }) => ({
@@ -98,6 +111,7 @@ export function registerBuiltinTemplates(
 
   registry.register({
     eventType: 'dispute.arbitrator_assigned',
+    critical: true,
     recipients: (p) =>
       typeof p.arbitratorUserId === 'string' ? [p.arbitratorUserId] : [],
     render: ({ lang, payload, deeplink }) => ({
@@ -121,6 +135,7 @@ export function registerBuiltinTemplates(
 
   registry.register({
     eventType: 'dispute.decision_made',
+    critical: true,
     recipients: (p) => {
       const ids: string[] = [];
       if (typeof p.buyerUserId === 'string') ids.push(p.buyerUserId);
