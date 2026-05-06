@@ -241,12 +241,14 @@ export class DealStateMachine {
     deal.status = toStatus;
     deal.updatedAt = new Date();
 
-    // Создаём событие
-    const event = this.createEvent(deal, transition, userId);
-    if (!deal.events) {
-      deal.events = [];
-    }
-    deal.events.push(event);
+    // NB: we deliberately do NOT push a synthetic event into
+    // `deal.events` here. The deal is saved with `cascade: true`, and
+    // mutating the in-memory events array — while the relation is not
+    // loaded from the DB — makes TypeORM think every existing event row
+    // should be detached from the deal (UPDATE deal_id = NULL), which
+    // fails since `deal_id` is NOT NULL. Service callers persist
+    // transition events via `eventRepository.save(...)` directly.
+    void this.createEvent(deal, transition, userId);
 
     return deal;
   }
@@ -270,16 +272,19 @@ export class DealStateMachine {
     deal: Deal,
     transition: StateTransition,
     userId?: string,
-  ): DealEvent {
+  ): Partial<DealEvent> {
+    // Build a partial entity — leave `id` undefined so TypeORM/Postgres
+    // generate the UUID. Setting `id: ''` would make the cascade save
+    // attempt a SELECT … WHERE id IN ('') which Postgres rejects with
+    // "invalid input syntax for type uuid".
     return {
-      id: '',
       type: transition.event,
       dealId: deal.id,
-      userId: userId || '',
+      userId: userId ?? null,
       description: '',
       metadata: {},
       createdAt: new Date(),
-    } as DealEvent;
+    };
   }
 
   /**

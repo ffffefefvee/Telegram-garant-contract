@@ -16,7 +16,8 @@ import { ArbitratorService } from './arbitrator.service';
 import { ArbitrationSettingsService } from './arbitration-settings.service';
 import { DisputeService } from './dispute.service';
 import { ArbitratorStatus, DisputeStatus } from './entities/enums/arbitration.enum';
-import { RequireAuthMiddleware } from '../auth/auth.middleware';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { UserPayload } from '../auth/auth.middleware';
 
 /**
  * Контроллер для админ-панели арбитража
@@ -49,15 +50,19 @@ export class AdminArbitrationController {
 
   @Post('arbitrators/:userId/approve')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async approveArbitrator(@Param('userId', ParseUUIDPipe) userId: string) {
-    const user = (arguments[0] as any).user;
+  async approveArbitrator(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() user: UserPayload,
+  ) {
     return this.arbitratorService.approveArbitrator(user.id, userId);
   }
 
   @Post('arbitrators/:userId/reject')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async rejectArbitrator(@Param('userId', ParseUUIDPipe) userId: string) {
-    const user = (arguments[0] as any).user;
+  async rejectArbitrator(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() user: UserPayload,
+  ) {
     return this.arbitratorService.rejectArbitrator(user.id, userId);
   }
 
@@ -66,15 +71,17 @@ export class AdminArbitrationController {
   async suspendArbitrator(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() dto: { reason: string },
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.arbitratorService.suspendArbitrator(user.id, userId, dto.reason);
   }
 
   @Post('arbitrators/:userId/reactivate')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async reactivateArbitrator(@Param('userId', ParseUUIDPipe) userId: string) {
-    const user = (arguments[0] as any).user;
+  async reactivateArbitrator(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() user: UserPayload,
+  ) {
     return this.arbitratorService.reactivateArbitrator(user.id, userId);
   }
 
@@ -98,8 +105,8 @@ export class AdminArbitrationController {
   async reassignArbitrator(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: { arbitratorId: string },
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.disputeService.assignArbitrator(id, dto.arbitratorId, user.id, false);
   }
 
@@ -107,9 +114,9 @@ export class AdminArbitrationController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async closeDispute(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserPayload,
     @Body() dto?: { reason?: string },
   ) {
-    const user = (arguments[0] as any).user;
     return this.disputeService.closeDispute(id, user.id, dto?.reason);
   }
 
@@ -129,8 +136,8 @@ export class AdminArbitrationController {
   async updateSetting(
     @Param('key') key: string,
     @Body() dto: { value: string },
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.settingsService.updateSetting(key, dto.value, user.id);
   }
 

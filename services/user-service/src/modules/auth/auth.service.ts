@@ -92,6 +92,28 @@ export class AuthService {
   }
 
   /**
+   * Dev-only login. Skips Telegram initData validation, upserts a User by
+   * the supplied telegramId, and issues a JWT. Caller (auth controller) is
+   * responsible for env-gating this so it never runs in production.
+   */
+  async devLogin(opts: {
+    telegramId: number;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+    languageCode?: string;
+  }): Promise<AuthSession> {
+    const user = await this.users.updateTelegramUser(
+      opts.telegramId,
+      opts.username,
+      opts.firstName,
+      opts.lastName,
+      opts.languageCode,
+    );
+    return this.issueToken(user);
+  }
+
+  /**
    * Build and sign the JWT. Exposed separately so other auth flows (e.g. an
    * admin-impersonation flow added later) can reuse it.
    */
