@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Put,
-  Delete,
   Body,
   Param,
   Query,
@@ -12,12 +11,12 @@ import {
   ParseUUIDPipe,
   ParseIntPipe,
 } from '@nestjs/common';
-import { DealService, CreateDealDto, UpdateDealDto, CreateMessageDto, DealFilterDto } from './deal.service';
+import { DealService, CreateDealDto, UpdateDealDto, DealFilterDto } from './deal.service';
 import { Deal } from './entities/deal.entity';
 import { DealMessage } from './entities/deal-message.entity';
 import { DealInvite } from './entities/deal-invite.entity';
-import { DealStatus, DealSide } from './enums/deal.enum';
-import { RequireAuthMiddleware } from '../auth/auth.middleware';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { UserPayload } from '../auth/auth.middleware';
 
 @Controller('deals')
 export class DealController {
@@ -27,17 +26,16 @@ export class DealController {
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() data: CreateDealDto,
+    @CurrentUser() user: UserPayload,
   ): Promise<Deal> {
-    // User добавляется из middleware
-    const user = (arguments[0] as any).user;
-    return this.dealService.create(data, user);
+    return this.dealService.create(data, user.id);
   }
 
   @Get()
   async findMany(
     @Query() filter: DealFilterDto,
+    @CurrentUser() user: UserPayload,
   ): Promise<{ deals: Deal[]; total: number }> {
-    const user = (arguments[0] as any).user;
     return this.dealService.findMany(filter, user.id);
   }
 
@@ -61,8 +59,8 @@ export class DealController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() data: UpdateDealDto,
+    @CurrentUser() user: UserPayload,
   ): Promise<Deal> {
-    const user = (arguments[0] as any).user;
     return this.dealService.update(id, data, user.id);
   }
 
@@ -70,14 +68,16 @@ export class DealController {
   async cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { reason?: string },
+    @CurrentUser() user: UserPayload,
   ): Promise<Deal> {
-    const user = (arguments[0] as any).user;
     return this.dealService.cancel(id, user.id, body.reason);
   }
 
   @Post(':id/accept')
-  async accept(@Param('id', ParseUUIDPipe) id: string): Promise<Deal> {
-    const user = (arguments[0] as any).user;
+  async accept(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserPayload,
+  ): Promise<Deal> {
     return this.dealService.accept(id, user.id);
   }
 
@@ -85,14 +85,16 @@ export class DealController {
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { reason?: string },
+    @CurrentUser() user: UserPayload,
   ): Promise<Deal> {
-    const user = (arguments[0] as any).user;
     return this.dealService.reject(id, user.id, body.reason);
   }
 
   @Post(':id/confirm')
-  async confirmReceipt(@Param('id', ParseUUIDPipe) id: string): Promise<Deal> {
-    const user = (arguments[0] as any).user;
+  async confirmReceipt(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserPayload,
+  ): Promise<Deal> {
     return this.dealService.confirmReceipt(id, user.id);
   }
 
@@ -100,8 +102,8 @@ export class DealController {
   async openDispute(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { reason: string },
+    @CurrentUser() user: UserPayload,
   ): Promise<Deal> {
-    const user = (arguments[0] as any).user;
     return this.dealService.openDispute(id, user.id, body.reason);
   }
 
@@ -118,8 +120,8 @@ export class DealController {
   async createMessage(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { content: string },
+    @CurrentUser() user: UserPayload,
   ): Promise<DealMessage> {
-    const user = (arguments[0] as any).user;
     return this.dealService.createMessage({
       dealId: id,
       senderId: user.id,
@@ -144,8 +146,8 @@ export class DealController {
       message?: string;
       expiresInHours?: number;
     },
+    @CurrentUser() user: UserPayload,
   ): Promise<DealInvite> {
-    const user = (arguments[0] as any).user;
     return this.dealService.createInvite(
       id,
       user.id,
@@ -157,7 +159,10 @@ export class DealController {
   }
 
   @Get(':id/stats')
-  async getStats(@Param('id', ParseUUIDPipe) id: string): Promise<{
+  async getStats(
+    @Param('id', ParseUUIDPipe) _id: string,
+    @CurrentUser() user: UserPayload,
+  ): Promise<{
     totalDeals: number;
     activeDeals: number;
     completedDeals: number;
@@ -165,7 +170,6 @@ export class DealController {
     asBuyer: number;
     asSeller: number;
   }> {
-    const user = (arguments[0] as any).user;
     return this.dealService.getUserStats(user.id);
   }
 }

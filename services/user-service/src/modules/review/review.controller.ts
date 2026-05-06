@@ -14,8 +14,8 @@ import {
 } from '@nestjs/common';
 import { ReviewService, CreateReviewDto, ReviewFilterDto } from './review.service';
 import { Review } from './entities/review.entity';
-import { ReviewStatus } from './enums/review.enum';
-import { RequireAuthMiddleware } from '../auth/auth.middleware';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { UserPayload } from '../auth/auth.middleware';
 
 @Controller('reviews')
 export class ReviewController {
@@ -23,8 +23,10 @@ export class ReviewController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createReview(@Body() data: CreateReviewDto): Promise<Review> {
-    const user = (arguments[0] as any).user;
+  async createReview(
+    @Body() data: CreateReviewDto,
+    @CurrentUser() user: UserPayload,
+  ): Promise<Review> {
     data.authorId = user.id;
     return this.reviewService.createReview(data);
   }
@@ -78,20 +80,20 @@ export class ReviewController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteReview(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserPayload,
   ): Promise<void> {
-    const user = (arguments[0] as any).user;
     await this.reviewService.deleteReview(id, user.id);
   }
 
   @Get('check/:targetId')
   async canLeaveReview(
     @Param('targetId', ParseUUIDPipe) targetId: string,
+    @CurrentUser() user: UserPayload,
     @Query('dealId') dealId?: string,
   ): Promise<{
     canLeave: boolean;
     reason?: string;
   }> {
-    const user = (arguments[0] as any).user;
     return this.reviewService.canLeaveReview(user.id, targetId, dealId);
   }
 }

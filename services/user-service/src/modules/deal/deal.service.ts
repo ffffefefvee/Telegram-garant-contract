@@ -108,10 +108,22 @@ export class DealService {
   /**
    * Создание новой сделки
    */
-  async create(data: CreateDealDto, buyer: User): Promise<Deal> {
+  async create(data: CreateDealDto, buyerOrId: User | string): Promise<Deal> {
     // Валидация суммы
     if (data.amount <= 0) {
       throw new BadRequestException('Amount must be greater than 0');
+    }
+
+    // Buyer can be passed as a full User entity (legacy callers) or as
+    // a string id (the controller now hands us the authenticated user
+    // payload from middleware, which only has the id). Always resolve
+    // to a hydrated User so we can read walletAddress, etc.
+    const buyer: User =
+      typeof buyerOrId === 'string'
+        ? await this.userService.findById(buyerOrId)
+        : buyerOrId;
+    if (!buyer) {
+      throw new BadRequestException('Buyer not found');
     }
 
     // Проверка продавца если указан
@@ -354,6 +366,10 @@ export class DealService {
     cancelledDeal.cancelledAt = new Date();
 
     const saved = await this.dealRepository.save(cancelledDeal);
+
+    await this.createEvent(
+      DealEvent.createDealCancelled(saved.id, userId, reason),
+    );
 
     // Нотификация контрагенту (не тому, кто отменил)
     const counterpartyId =

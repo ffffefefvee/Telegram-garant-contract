@@ -38,9 +38,10 @@ import {
 } from './dto';
 import {
   ArbitratorAvailability,
-  ArbitratorStatus,
   DisputeStatus,
 } from './entities/enums/arbitration.enum';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { UserPayload } from '../auth/auth.middleware';
 
 /**
  * Контроллер для управления арбитражем
@@ -62,8 +63,8 @@ export class ArbitrationController {
   async createDealTerms(
     @Param('dealId', ParseUUIDPipe) dealId: string,
     @Body() dto: DealTermsDto,
+    @CurrentUser() _user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.arbitrationService.createOrUpdateDealTerms(dealId, dto);
   }
 
@@ -79,14 +80,13 @@ export class ArbitrationController {
   async openDispute(
     @Body() dto: OpenDisputeDto,
     @Query('dealId', ParseUUIDPipe) dealId: string,
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.disputeService.openDispute(dealId, user.id, dto);
   }
 
   @Get('disputes')
-  async getMyDisputes() {
-    const user = (arguments[0] as any).user;
+  async getMyDisputes(@CurrentUser() user: UserPayload) {
     return this.disputeService.getUserDisputes(user.id);
   }
 
@@ -99,8 +99,8 @@ export class ArbitrationController {
   async assignArbitrator(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignArbitratorDto,
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.disputeService.assignArbitrator(id, dto.arbitratorId, user.id, dto.isAutoAssigned);
   }
 
@@ -108,8 +108,8 @@ export class ArbitrationController {
   async updateDisputeStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: { status: DisputeStatus },
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.disputeService.updateStatus(id, user.id, dto);
   }
 
@@ -125,8 +125,8 @@ export class ArbitrationController {
   async submitEvidence(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SubmitEvidenceDto,
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.evidenceService.submitEvidence(id, user.id, dto);
   }
 
@@ -149,8 +149,8 @@ export class ArbitrationController {
     @UploadedFile() file: any,
     @Body('description') description: string,
     @Body('type') type: string,
+    @CurrentUser() user: UserPayload,
   ) {
-    const user: any = (arguments[0] as any).user;
     return this.evidenceService.uploadFileEvidence(id, user.id, file, description, type as any);
   }
 
@@ -160,15 +160,19 @@ export class ArbitrationController {
   }
 
   @Post('evidence/:id/verify')
-  async verifyEvidence(@Param('id', ParseUUIDPipe) id: string) {
-    const user = (arguments[0] as any).user;
+  async verifyEvidence(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserPayload,
+  ) {
     return this.evidenceService.verifyEvidence(id, user.id);
   }
 
   @Delete('evidence/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteEvidence(@Param('id', ParseUUIDPipe) id: string) {
-    const user = (arguments[0] as any).user;
+  async deleteEvidence(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserPayload,
+  ) {
     return this.evidenceService.deleteEvidence(id, user.id);
   }
 
@@ -179,17 +183,17 @@ export class ArbitrationController {
   async makeDecision(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: MakeDecisionDto,
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.arbitrationService.makeDecision(id, user.id, dto);
   }
 
   @Post('decisions/:id/enforce')
   async enforceDecision(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserPayload,
     @Body() dto?: EnforceDecisionDto,
   ) {
-    const user = (arguments[0] as any).user;
     return this.arbitrationService.enforceDecision(id, user.id, dto);
   }
 
@@ -205,8 +209,8 @@ export class ArbitrationController {
   async fileAppeal(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: FileAppealDto,
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.arbitrationService.fileAppeal(id, user.id, dto);
   }
 
@@ -214,14 +218,16 @@ export class ArbitrationController {
   async reviewAppeal(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReviewAppealDto,
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.arbitrationService.reviewAppeal(id, user.id, dto);
   }
 
   @Post('appeals/:id/withdraw')
-  async withdrawAppeal(@Param('id', ParseUUIDPipe) id: string) {
-    const user = (arguments[0] as any).user;
+  async withdrawAppeal(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: UserPayload,
+  ) {
     return this.arbitrationService.withdrawAppeal(id, user.id);
   }
 
@@ -244,8 +250,8 @@ export class ArbitrationController {
   async sendChatMessage(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ArbitrationChatMessageDto,
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.arbitrationService.sendChatMessage(id, user.id, dto);
   }
 
@@ -257,16 +263,15 @@ export class ArbitrationController {
   }
 
   @Get('arbitrators/me')
-  async getMyArbitratorProfile() {
-    const user = (arguments[0] as any).user;
+  async getMyArbitratorProfile(@CurrentUser() user: UserPayload) {
     return this.arbitratorService.getProfile(user.id);
   }
 
   @Post('arbitrators/apply')
   async applyForArbitrator(
     @Body() dto: { specialization?: string[]; bio?: string; languages?: string[] },
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     return this.arbitratorService.applyForArbitrator(
       user.id,
       dto.specialization,
@@ -276,8 +281,7 @@ export class ArbitrationController {
   }
 
   @Get('arbitrators/me/statistics')
-  async getMyStatistics() {
-    const user = (arguments[0] as any).user;
+  async getMyStatistics(@CurrentUser() user: UserPayload) {
     return this.arbitratorService.getStatistics(user.id);
   }
 
@@ -288,8 +292,8 @@ export class ArbitrationController {
   @Patch('arbitrators/me/availability')
   async setMyAvailability(
     @Body() dto: { availability: ArbitratorAvailability },
+    @CurrentUser() user: UserPayload,
   ) {
-    const user = (arguments[0] as any).user;
     if (
       dto.availability !== ArbitratorAvailability.AVAILABLE &&
       dto.availability !== ArbitratorAvailability.AWAY

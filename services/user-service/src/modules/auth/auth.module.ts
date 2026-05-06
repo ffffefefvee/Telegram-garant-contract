@@ -42,6 +42,7 @@ export class AuthModule implements NestModule {
         { path: 'health', method: RequestMethod.GET },
         { path: 'ping', method: RequestMethod.GET },
         { path: 'auth/telegram', method: RequestMethod.POST },
+        { path: 'auth/dev-login', method: RequestMethod.POST },
         { path: 'webhook/(.*)', method: RequestMethod.POST },
       )
       .forRoutes('*');

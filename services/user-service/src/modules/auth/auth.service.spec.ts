@@ -119,6 +119,21 @@ describe('AuthService', () => {
     });
   });
 
+  describe('devLogin', () => {
+    it('upserts user and issues a token without initData', async () => {
+      const before = upsertedUsers.length;
+      const session = await service.devLogin({
+        telegramId: 9001,
+        username: 'devuser',
+        firstName: 'Dev',
+      });
+      expect(session.accessToken).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
+      expect(session.user.telegramId).toBe(9001);
+      expect(session.user.telegramUsername).toBe('devuser');
+      expect(upsertedUsers.length).toBe(before + 1);
+    });
+  });
+
   describe('configuration guards', () => {
     it('throws 503 when bot token missing', async () => {
       const moduleRef2 = await Test.createTestingModule({

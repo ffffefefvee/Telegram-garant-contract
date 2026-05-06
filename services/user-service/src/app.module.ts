@@ -44,6 +44,10 @@ import { StoreModule } from './modules/store/store.module';
 import { Store, StoreBot, StoreSettings, StoreTemplate } from './modules/store/entities/store.entity';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { OpsModule } from './modules/ops/ops.module';
+import { OutboxEvent } from './modules/ops/entities/outbox-event.entity';
+import { AuditLogEntry } from './modules/ops/entities/audit-log.entity';
+import { AdminLog } from './modules/admin/entities/admin-log.entity';
+import { AdminProfile } from './modules/admin/entities/admin-profile.entity';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { NotificationPreference } from './modules/notifications/entities/notification-preference.entity';
 import {
@@ -104,6 +108,10 @@ import {
               RecoveryLog,
               JobSchedule,
               NotificationPreference,
+              OutboxEvent,
+              AuditLogEntry,
+              AdminLog,
+              AdminProfile,
             ],
 synchronize: true,
             logging: configService.get('NODE_ENV') === 'development',
@@ -151,6 +159,10 @@ synchronize: true,
             RecoveryLog,
             JobSchedule,
             NotificationPreference,
+            OutboxEvent,
+            AuditLogEntry,
+            AdminLog,
+            AdminProfile,
           ],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: true,
