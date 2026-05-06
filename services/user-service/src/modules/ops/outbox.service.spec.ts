@@ -96,6 +96,32 @@ describe('OutboxService', () => {
     expect(repo.rows[0].status).toBe(OutboxStatus.DEAD);
   });
 
+  it('defers an event to a future availableAt without consuming an attempt', async () => {
+    const saved = await service.enqueue({
+      aggregateType: 'deal',
+      aggregateId: 'd1',
+      eventType: 'deal.created',
+    });
+    const before = Date.now();
+    await service.defer(saved.id, 60_000);
+    const row = repo.rows[0];
+    expect(row.status).toBe(OutboxStatus.PENDING);
+    expect(row.attempts).toBe(0);
+    expect(row.lastError).toBeNull();
+    expect(row.availableAt.getTime()).toBeGreaterThanOrEqual(before + 60_000);
+  });
+
+  it('clamps negative defer delays to zero', async () => {
+    const saved = await service.enqueue({
+      aggregateType: 'deal',
+      aggregateId: 'd1',
+      eventType: 'deal.created',
+    });
+    await service.defer(saved.id, -5000);
+    const row = repo.rows[0];
+    expect(row.availableAt.getTime()).toBeLessThanOrEqual(Date.now() + 10);
+  });
+
   it('truncates very long error messages', async () => {
     const saved = await service.enqueue({
       aggregateType: 'deal',

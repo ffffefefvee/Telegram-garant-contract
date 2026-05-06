@@ -99,6 +99,21 @@ export class OutboxService {
   }
 
   /**
+   * Reschedule a row to fire later without consuming an attempt. Used by
+   * the notification worker when a recipient is inside their quiet-hours
+   * window — the event is held, not failed, so backoff/DEAD parking
+   * (which is for transport errors) is bypassed.
+   */
+  async defer(id: string, delayMs: number): Promise<void> {
+    const safeDelay = Math.max(0, Math.floor(delayMs));
+    await this.repo.update(id, {
+      status: OutboxStatus.PENDING,
+      availableAt: new Date(Date.now() + safeDelay),
+      lastError: null,
+    });
+  }
+
+  /**
    * Bump attempt count + reschedule with exponential backoff (capped).
    * After 6 failed attempts the row is parked as DEAD for human review.
    */

@@ -55,14 +55,24 @@ export class NotificationWorkerScheduler implements OnModuleInit {
       for (const event of batch) {
         try {
           const result = await this.dispatcher.dispatch(event);
-          // Unhandled events are just absent templates — mark delivered
-          // so they don't re-fire forever. If you need a template,
-          // register one and replay manually.
-          await this.outbox.markDelivered(event.id);
-          if (result.delivered + result.skipped > 0 || result.unhandled) {
+          if (result.deferredMs !== null && result.deferredMs > 0) {
+            // Recipient is inside their quiet-hours window — hold the
+            // row, don't burn an attempt. Worker will re-pick it after
+            // the window ends.
+            await this.outbox.defer(event.id, result.deferredMs);
             this.logger.debug(
-              `Outbox ${event.eventType} id=${event.id}: delivered=${result.delivered} skipped=${result.skipped} unhandled=${result.unhandled}`,
+              `Outbox ${event.eventType} id=${event.id}: deferred ${result.deferredMs}ms (quiet hours)`,
             );
+          } else {
+            // Unhandled events are just absent templates — mark delivered
+            // so they don't re-fire forever. If you need a template,
+            // register one and replay manually.
+            await this.outbox.markDelivered(event.id);
+            if (result.delivered + result.skipped > 0 || result.unhandled) {
+              this.logger.debug(
+                `Outbox ${event.eventType} id=${event.id}: delivered=${result.delivered} skipped=${result.skipped} unhandled=${result.unhandled}`,
+              );
+            }
           }
         } catch (err) {
           const e = err as Error;
