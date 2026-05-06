@@ -5,6 +5,15 @@ import { AuditLogEntry } from './entities/audit-log.entity';
 
 function makeRepo(): any {
   const rows: AuditLogEntry[] = [];
+  const matches = (r: AuditLogEntry, where: any): boolean =>
+    Object.entries(where).every(([k, v]) => {
+      const rv = (r as any)[k];
+      // Naive treatment of TypeORM operators (Between/MoreThanOrEqual etc.) — we
+      // skip filtering on them in tests; assert ordering/pagination at the
+      // logical level instead.
+      if (v && typeof v === 'object' && '_type' in (v as any)) return true;
+      return rv === v;
+    });
   return {
     rows,
     create: jest.fn((data: Partial<AuditLogEntry>) => ({
@@ -17,11 +26,11 @@ function makeRepo(): any {
       return e;
     }),
     find: jest.fn(async ({ where }: any) => {
-      return rows
-        .filter((r) =>
-          Object.entries(where).every(([k, v]) => (r as any)[k] === v),
-        )
-        .reverse();
+      return rows.filter((r) => matches(r, where)).reverse();
+    }),
+    findAndCount: jest.fn(async ({ where = {}, skip = 0, take = 50 }: any) => {
+      const filtered = rows.filter((r) => matches(r, where)).reverse();
+      return [filtered.slice(skip, skip + take), filtered.length];
     }),
   };
 }
@@ -95,5 +104,38 @@ describe('AuditLogService', () => {
     const list = await service.findByActor('u1');
     expect(list).toHaveLength(1);
     expect(list[0].actorId).toBe('u1');
+  });
+
+  it('paginates with filters', async () => {
+    for (let i = 0; i < 5; i++) {
+      await service.write({
+        actorId: 'u1',
+        aggregateType: 'deal',
+        aggregateId: `d${i}`,
+        action: 'deal.created',
+      });
+    }
+    await service.write({
+      actorId: 'u2',
+      aggregateType: 'arbitrator',
+      aggregateId: 'a1',
+      action: 'arbitrator.approved',
+    });
+
+    const page1 = await service.findPaginated({ page: 1, limit: 2, action: 'deal.created' });
+    expect(page1.total).toBe(5);
+    expect(page1.items).toHaveLength(2);
+    expect(page1.page).toBe(1);
+
+    const page2 = await service.findPaginated({ page: 2, limit: 2, action: 'deal.created' });
+    expect(page2.items).toHaveLength(2);
+
+    const filtered = await service.findPaginated({ aggregateType: 'arbitrator' });
+    expect(filtered.total).toBe(1);
+  });
+
+  it('clamps limit to a safe maximum', async () => {
+    const result = await service.findPaginated({ limit: 9999 });
+    expect(result.limit).toBeLessThanOrEqual(200);
   });
 });

@@ -13,10 +13,14 @@ import { AdminDealController } from './admin-deal.controller';
 import { AdminDisputeController } from './admin-dispute.controller';
 import { AdminPaymentController } from './admin-payment.controller';
 import { AdminSettingsController } from './admin-settings.controller';
+import { AdminTreasuryController } from './admin-treasury.controller';
+import { AdminAuditController } from './admin-audit.controller';
 import { UserModule } from '../user/user.module';
 import { DealModule } from '../deal/deal.module';
 import { PaymentModule } from '../payment/payment.module';
 import { ArbitrationModule } from '../arbitration/arbitration.module';
+import { OpsModule } from '../ops/ops.module';
+import { BlockchainModule } from '../blockchain/blockchain.module';
 
 @Module({
   imports: [
@@ -25,6 +29,8 @@ import { ArbitrationModule } from '../arbitration/arbitration.module';
     forwardRef(() => DealModule),
     forwardRef(() => PaymentModule),
     forwardRef(() => ArbitrationModule),
+    OpsModule,
+    BlockchainModule,
   ],
   controllers: [
     AdminController,
@@ -32,6 +38,8 @@ import { ArbitrationModule } from '../arbitration/arbitration.module';
     AdminDisputeController,
     AdminPaymentController,
     AdminSettingsController,
+    AdminTreasuryController,
+    AdminAuditController,
   ],
   providers: [AdminService, AdminDashboardService],
   exports: [AdminService, AdminDashboardService],
