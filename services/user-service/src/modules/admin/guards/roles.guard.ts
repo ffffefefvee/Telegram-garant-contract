@@ -18,22 +18,33 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const user = request.user; // Предполагается, что user уже добавлен в request после AuthMiddleware
+    const user = request.user;
 
     if (!user) {
       throw new ForbiddenException('User not found');
     }
 
-    // Проверяем роль пользователя (временно используем поле role, если оно есть, или默认 admin для теста)
-    // В реальной системе это должно проверяться через JWT токен
-    const userRole: Role = user.role || Role.USER; 
+    const userRoles = normalizeRoles(user);
+    const hasRole = requiredRoles.some((role) => userRoles.has(role));
 
-    const hasRole = requiredRoles.some((role) => userRole === role);
-    
     if (!hasRole) {
       throw new ForbiddenException(`Требуется одна из ролей: ${requiredRoles.join(', ')}`);
     }
 
     return true;
   }
+}
+
+function normalizeRoles(user: { role?: Role; roles?: Role[] }): Set<Role> {
+  const roles = new Set<Role>();
+  for (const role of user.roles ?? []) {
+    roles.add(role);
+  }
+  if (user.role) {
+    roles.add(user.role);
+  }
+  if (roles.size === 0) {
+    roles.add(Role.USER);
+  }
+  return roles;
 }

@@ -78,6 +78,25 @@ describe('OutboxService', () => {
     expect(repo.rows[0].deliveredAt).toBeInstanceOf(Date);
   });
 
+  it('defers an in-flight event without counting it as a failure', async () => {
+    const saved = await service.enqueue({
+      aggregateType: 'deal',
+      aggregateId: 'd1',
+      eventType: 'deal.created',
+    });
+    repo.rows[0].status = OutboxStatus.IN_FLIGHT;
+    const before = Date.now();
+
+    await service.defer(saved.id, 60_000);
+
+    expect(repo.rows[0].status).toBe(OutboxStatus.PENDING);
+    expect(repo.rows[0].attempts).toBe(0);
+    expect(repo.rows[0].lastError).toBeNull();
+    expect(repo.rows[0].availableAt.getTime()).toBeGreaterThanOrEqual(
+      before + 60_000,
+    );
+  });
+
   it('retries with backoff on failure and parks DEAD after 6 attempts', async () => {
     const saved = await service.enqueue({
       aggregateType: 'deal',

@@ -98,6 +98,14 @@ export class OutboxService {
     });
   }
 
+  async defer(id: string, delayMs: number): Promise<void> {
+    await this.repo.update(id, {
+      status: OutboxStatus.PENDING,
+      availableAt: new Date(Date.now() + delayMs),
+      lastError: null,
+    });
+  }
+
   /**
    * Bump attempt count + reschedule with exponential backoff (capped).
    * After 6 failed attempts the row is parked as DEAD for human review.

@@ -55,6 +55,13 @@ export class NotificationWorkerScheduler implements OnModuleInit {
       for (const event of batch) {
         try {
           const result = await this.dispatcher.dispatch(event);
+          if (result.deferredMs !== null) {
+            await this.outbox.defer(event.id, result.deferredMs);
+            this.logger.debug(
+              `Outbox ${event.eventType} id=${event.id}: deferred for ${result.deferredMs}ms`,
+            );
+            continue;
+          }
           // Unhandled events are just absent templates — mark delivered
           // so they don't re-fire forever. If you need a template,
           // register one and replay manually.
