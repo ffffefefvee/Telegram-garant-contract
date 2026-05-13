@@ -74,6 +74,11 @@ export class NotificationDispatcher implements OnModuleInit {
     let delivered = 0;
     let skipped = 0;
     let deferDeltaMs: number | null = null;
+    const deliveries: Array<{
+      telegramId: number;
+      text: string;
+      keyboard: ReturnType<typeof template.render>['keyboard'];
+    }> = [];
 
     for (const userId of recipientIds) {
       const user = await this.userRepo.findOne({ where: { id: userId } });
@@ -106,11 +111,27 @@ export class NotificationDispatcher implements OnModuleInit {
         payload: event.payload,
         deeplink: this.deeplink,
       });
+      deliveries.push({
+        telegramId: user.telegramId,
+        text: rendered.text,
+        keyboard: rendered.keyboard,
+      });
+    }
 
+    if (deferDeltaMs !== null) {
+      return {
+        delivered: 0,
+        skipped,
+        deferredMs: deferDeltaMs,
+        unhandled: false,
+      };
+    }
+
+    for (const delivery of deliveries) {
       try {
-        await this.bot.sendMessage(user.telegramId, rendered.text, {
+        await this.bot.sendMessage(delivery.telegramId, delivery.text, {
           parseMode: 'HTML',
-          replyMarkup: rendered.keyboard,
+          replyMarkup: delivery.keyboard,
         });
         delivered += 1;
       } catch (err) {

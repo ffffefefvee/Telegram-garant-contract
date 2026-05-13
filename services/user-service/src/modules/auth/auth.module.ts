@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from '../user/user.module';
+import { AdminProfile } from '../admin/entities/admin-profile.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RequireAuthMiddleware } from './auth.middleware';
@@ -24,6 +26,7 @@ import { RequireAuthMiddleware } from './auth.middleware';
 @Module({
   imports: [
     ConfigModule,
+    TypeOrmModule.forFeature([AdminProfile]),
     UserModule,
     // JwtModule registered without a static secret — AuthService reads
     // JWT_SECRET from ConfigService at sign/verify time. This keeps secrets

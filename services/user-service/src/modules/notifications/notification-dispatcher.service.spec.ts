@@ -14,6 +14,7 @@ import { OutboxEvent, OutboxStatus } from '../ops/entities/outbox-event.entity';
 
 describe('NotificationDispatcher', () => {
   let dispatcher: NotificationDispatcher;
+  let preferences: NotificationPreferenceService;
   let userRepo: { findOne: jest.Mock };
   let prefRepo: { findOne: jest.Mock; create: jest.Mock; save: jest.Mock };
   let bot: { sendMessage: jest.Mock };
@@ -57,6 +58,7 @@ describe('NotificationDispatcher', () => {
     }).compile();
 
     dispatcher = module.get(NotificationDispatcher);
+    preferences = module.get(NotificationPreferenceService);
     // Manually trigger template registration (OnModuleInit doesn't fire in this setup).
     registerBuiltinTemplates(module.get(NotificationTemplateRegistry));
   });
@@ -190,6 +192,43 @@ describe('NotificationDispatcher', () => {
     const sellerCall = bot.sendMessage.mock.calls.find((c) => c[0] === 22);
     expect(buyerCall[1]).toContain('70');
     expect(sellerCall[1]).toContain('30');
+  });
+
+  it('defers an event without partially sending when any recipient is in quiet hours', async () => {
+    jest
+      .spyOn(preferences, 'quietHoursDelayMs')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(60_000);
+    userRepo.findOne
+      .mockResolvedValueOnce({
+        id: 'user-buyer',
+        telegramId: 11,
+        telegramLanguageCode: 'ru',
+      })
+      .mockResolvedValueOnce({
+        id: 'user-seller',
+        telegramId: 22,
+        telegramLanguageCode: 'ru',
+      });
+    prefRepo.findOne.mockResolvedValue(null);
+
+    const result = await dispatcher.dispatch(
+      makeEvent('dispute.decision_made', {
+        buyerUserId: 'user-buyer',
+        sellerUserId: 'user-seller',
+        dealTitle: 'Laptop',
+        buyerShare: 70,
+        sellerShare: 30,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      delivered: 0,
+      skipped: 1,
+      deferredMs: 60_000,
+      unhandled: false,
+    });
+    expect(bot.sendMessage).not.toHaveBeenCalled();
   });
 
   it('delivers deal.created to seller', async () => {
