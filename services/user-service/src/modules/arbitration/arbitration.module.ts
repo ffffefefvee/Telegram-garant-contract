@@ -36,6 +36,8 @@ import { EscrowModule } from '../escrow/escrow.module';
 import { OpsModule } from '../ops/ops.module';
 import { Deal } from '../deal/entities/deal.entity';
 import { User } from '../user/entities/user.entity';
+import { AdminProfile } from '../admin/entities/admin-profile.entity';
+import { RolesGuard } from '../admin/guards/roles.guard';
 
 @Module({
   imports: [
@@ -52,6 +54,7 @@ import { User } from '../user/entities/user.entity';
       ArbitratorProfile,
       Deal,
       User,
+      AdminProfile,
     ]),
     forwardRef(() => UserModule),
     forwardRef(() => DealModule),
@@ -73,6 +76,7 @@ import { User } from '../user/entities/user.entity';
     ArbitrationSettingsService,
     ArbitratorSelectionService,
     DisputeBlockchainService,
+    RolesGuard,
   ],
   exports: [
     ArbitrationService,

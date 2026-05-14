@@ -21,6 +21,7 @@ import { PaymentModule } from '../payment/payment.module';
 import { ArbitrationModule } from '../arbitration/arbitration.module';
 import { OpsModule } from '../ops/ops.module';
 import { BlockchainModule } from '../blockchain/blockchain.module';
+import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
@@ -41,7 +42,7 @@ import { BlockchainModule } from '../blockchain/blockchain.module';
     AdminTreasuryController,
     AdminAuditController,
   ],
-  providers: [AdminService, AdminDashboardService],
+  providers: [AdminService, AdminDashboardService, RolesGuard],
   exports: [AdminService, AdminDashboardService],
 })
 export class AdminModule {}

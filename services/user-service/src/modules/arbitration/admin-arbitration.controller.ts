@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   ParseEnumPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ArbitratorService } from './arbitrator.service';
 import { ArbitrationSettingsService } from './arbitration-settings.service';
@@ -18,12 +19,17 @@ import { DisputeService } from './dispute.service';
 import { ArbitratorStatus, DisputeStatus } from './entities/enums/arbitration.enum';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { UserPayload } from '../auth/auth.middleware';
+import { Roles } from '../admin/decorators/roles.decorator';
+import { Role } from '../admin/enums/role.enum';
+import { RolesGuard } from '../admin/guards/roles.guard';
 
 /**
  * Контроллер для админ-панели арбитража
  * Только для Super Admin
  */
 @Controller('admin/arbitration')
+@UseGuards(RolesGuard)
+@Roles(Role.ADMIN, Role.SUPER_ADMIN)
 export class AdminArbitrationController {
   constructor(
     private readonly arbitratorService: ArbitratorService,
