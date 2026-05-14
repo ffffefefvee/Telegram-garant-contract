@@ -1,13 +1,20 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { AdminProfile } from '../entities/admin-profile.entity';
 import { Role } from '../enums/role.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    @InjectRepository(AdminProfile)
+    private readonly adminProfiles: Repository<AdminProfile>,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -24,9 +31,10 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User not found');
     }
 
-    // Проверяем роль пользователя (временно используем поле role, если оно есть, или默认 admin для теста)
-    // В реальной системе это должно проверяться через JWT токен
-    const userRole: Role = user.role || Role.USER; 
+    const profile = await this.adminProfiles.findOne({
+      where: { userId: user.id, isActive: true },
+    });
+    const userRole: Role = profile?.role || Role.USER;
 
     const hasRole = requiredRoles.some((role) => userRole === role);
     
